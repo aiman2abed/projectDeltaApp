@@ -1,6 +1,5 @@
-# EE Microlearning App
-
-A spaced-repetition microlearning platform for Electrical Engineering concepts.
+# project codename
+DeltaApp
 
 ## How to run the project locally
 
