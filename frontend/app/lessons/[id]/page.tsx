@@ -23,6 +23,23 @@ export default function LessonDetailPage() {
       .catch(err => console.error("Error:", err));
   }, [id]);
 
+  // --- NEW FUNCTION ADDED HERE (Inside the component, before the return) ---
+  const handleMarkUnderstood = async () => {
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/progress/${id}`, {
+        method: "POST",
+      });
+      if (response.ok) {
+        alert("Lesson mastered! We will remind you to review this later.");
+      } else {
+        alert("Failed to save progress.");
+      }
+    } catch (error) {
+      console.error("Failed to update progress:", error);
+    }
+  };
+  // -------------------------------------------------------------------------
+
   if (!lesson) return <div className="text-center mt-10">Loading Lesson Content...</div>;
 
   return (
@@ -49,9 +66,16 @@ export default function LessonDetailPage() {
 
         <div className="mt-10 pt-6 border-t border-gray-100 flex justify-between">
           <button className="text-gray-400 font-medium cursor-not-allowed">Previous</button>
-          <button className="bg-green-600 text-white px-6 py-2 rounded-full font-bold hover:bg-green-700 transition">
+          
+          {/* --- UPDATE: onClick ATTRIBUTE ADDED TO THIS BUTTON --- */}
+          <button 
+            onClick={handleMarkUnderstood}
+            className="bg-green-600 text-white px-6 py-2 rounded-full font-bold hover:bg-green-700 transition"
+          >
             Mark as Understood
           </button>
+          {/* ------------------------------------------------------ */}
+          
         </div>
       </article>
     </div>
