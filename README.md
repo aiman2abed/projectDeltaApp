@@ -1,4 +1,4 @@
-##project code name DeltaApp
+#project code name DeltaApp
 
 ## How to run the project locally
 
