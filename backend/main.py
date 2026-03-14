@@ -48,6 +48,12 @@ def get_lesson(lesson_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Lesson not found")
         
     return lesson
+# Add this above or below your other lesson routes
+@app.get("/api/lessons", response_model=List[schemas.LessonResponse])
+def get_all_lessons(db: Session = Depends(get_db)):
+    # This query grabs every single row in the lessons table
+    lessons = db.query(models.Lesson).order_by(models.Lesson.id).all()
+    return lessons
 
 @app.post("/api/progress/{lesson_id}")
 def mark_lesson_understood(lesson_id: int, db: Session = Depends(get_db)):

@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Float, Date
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Float, Date, JSON
 from sqlalchemy.orm import relationship
 from database import Base
+
+
 
 class User(Base):
     __tablename__ = "users"
@@ -24,6 +26,11 @@ class Lesson(Base):
     title = Column(String(255), nullable=False)
     content_text = Column(Text, nullable=False)
     content_math = Column(Text)
+
+    video_url = Column(String, nullable=True)
+    quiz_question = Column(Text, nullable=True)
+    quiz_options = Column(JSON, nullable=True)
+    correct_answer = Column(String, nullable=True)
     
     module = relationship("Module", back_populates="lessons")
 

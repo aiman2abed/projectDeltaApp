@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": ".", // Tells TypeScript where the root of the project is
     "target": "ES2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
@@ -19,7 +20,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+        "@/*": ["./src/*"] // Points the @ symbol specifically to the src folder for cleaner imports
     }
   },
   "include": [

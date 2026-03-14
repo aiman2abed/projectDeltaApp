@@ -1,83 +1,93 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
-import 'katex/dist/katex.min.css';
-import { InlineMath, BlockMath } from 'react-katex';
+import VideoPlayer from "@/components/VideoPlayer";
+import QuizEngine from "@/components/QuizEngine";
+import MathRenderer from "@/components/MathRenderer";
 
+// Define the structure of our V2 Lesson data
 interface Lesson {
   id: number;
   title: string;
   content_text: string;
-  content_math: string;
+  content_math?: string;
+  video_url?: string;
+  quiz_question?: string;
+  quiz_options?: string[];
+  correct_answer?: string;
 }
 
-export default function LessonDetailPage() {
-  const { id } = useParams();
+export default function LessonPage() {
+  const params = useParams();
   const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [isUnlocked, setIsUnlocked] = useState(false); // New lock state
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`http://127.0.0.1:8000/api/lessons/${id}`)
-      .then(res => res.json())
-      .then(data => setLesson(data))
-      .catch(err => console.error("Error:", err));
-  }, [id]);
-
-  // --- NEW FUNCTION ADDED HERE (Inside the component, before the return) ---
-  const handleMarkUnderstood = async () => {
-    try {
-      const response = await fetch(`http://127.0.0.1:8000/api/progress/${id}`, {
-        method: "POST",
+    fetch(`http://127.0.0.1:8000/api/lessons/${params.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setLesson(data);
+        setLoading(false);
       });
-      if (response.ok) {
-        alert("Lesson mastered! We will remind you to review this later.");
-      } else {
-        alert("Failed to save progress.");
-      }
-    } catch (error) {
-      console.error("Failed to update progress:", error);
+  }, [params.id]);
+
+  const handleMarkAsUnderstood = async () => {
+    // This remains the same as T8, sending the signal to the SRS engine
+    const response = await fetch(`http://127.0.0.1:8000/api/progress/${params.id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: 1, quality: 5 }), 
+    });
+
+    if (response.ok) {
+      alert("Progress saved! The SRS engine has scheduled your next review.");
     }
   };
-  // -------------------------------------------------------------------------
 
-  if (!lesson) return <div className="text-center mt-10">Loading Lesson Content...</div>;
+  if (loading) return <div className="p-8 text-center animate-pulse text-blue-900">Loading lesson...</div>;
+  if (!lesson) return <div className="p-8 text-center text-red-600">Lesson not found.</div>;
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <Link href="/modules" className="text-blue-600 hover:text-blue-800 font-medium mb-6 inline-block">
-        ← Back to All Modules
-      </Link>
-      
-      <article className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">{lesson.title}</h1>
+    <div className="max-w-4xl mx-auto p-6">
+      <h1 className="text-3xl font-bold text-blue-900 mb-6">{lesson.title}</h1>
+
+      {/* 1. VIDEO COMPONENT (The Reel) */}
+      {lesson.video_url && <VideoPlayer url={lesson.video_url} />}
+
+      {/* 2. TEXT & MATH CONTENT */}
+      <div className="prose prose-blue max-w-none mb-8 bg-gray-50 p-6 rounded-lg border border-gray-200">
+        <p className="text-gray-800 leading-relaxed mb-4">{lesson.content_text}</p>
         
-        <div className="prose prose-blue max-w-none text-gray-700 leading-relaxed mb-8">
-          {lesson.content_text}
-        </div>
-
         {lesson.content_math && (
-          <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 my-8">
-            <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-4">Core Formula</p>
-            <div className="text-2xl text-blue-900 overflow-x-auto">
-              <BlockMath math={lesson.content_math} />
-            </div>
-          </div>
+          <MathRenderer formula={lesson.content_math} />
         )}
+      </div>
 
-        <div className="mt-10 pt-6 border-t border-gray-100 flex justify-between">
-          <button className="text-gray-400 font-medium cursor-not-allowed">Previous</button>
-          
-          {/* --- UPDATE: onClick ATTRIBUTE ADDED TO THIS BUTTON --- */}
-          <button 
-            onClick={handleMarkUnderstood}
-            className="bg-green-600 text-white px-6 py-2 rounded-full font-bold hover:bg-green-700 transition"
-          >
-            Mark as Understood
-          </button>
-          {/* ------------------------------------------------------ */}
-          
-        </div>
-      </article>
+      {/* 3. QUIZ ENGINE (The knowledge check) */}
+      {lesson.quiz_question && lesson.quiz_options && lesson.correct_answer && (
+        <QuizEngine
+          question={lesson.quiz_question}
+          options={lesson.quiz_options}
+          correctAnswer={lesson.correct_answer}
+          onSuccess={() => setIsUnlocked(true)} // Flipping the lock!
+        />
+      )}
+
+      {/* 4. COMPLETION BUTTON (The Spaced Repetition trigger) */}
+      <div className="flex justify-center mt-12 pb-12">
+        <button
+          onClick={handleMarkAsUnderstood}
+          disabled={!isUnlocked} // Disabled until the quiz is passed
+          className={`px-8 py-4 rounded-full font-bold text-lg transition-all duration-300 shadow-lg ${
+            isUnlocked
+              ? "bg-green-600 text-white hover:bg-green-700 hover:scale-105 active:scale-95 cursor-pointer"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed grayscale"
+          }`}
+        >
+          {isUnlocked ? "🚀 Mark as Understood" : "🔒 Pass Quiz to Unlock"}
+        </button>
+      </div>
     </div>
   );
 }

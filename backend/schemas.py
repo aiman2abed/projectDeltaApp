@@ -1,21 +1,57 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import List, Optional
+from datetime import date
 
-# 1. Schema for a single Lesson
-class LessonResponse(BaseModel):
+# --- MODULE SCHEMAS ---
+class ModuleBase(BaseModel):
+    title: str
+    description: str
+
+class ModuleCreate(ModuleBase):
+    pass
+
+class ModuleResponse(ModuleBase):
     id: int
+
+    class Config:
+        from_attributes = True
+
+# --- LESSON SCHEMAS ---
+class LessonBase(BaseModel):
     title: str
     content_text: str
     content_math: Optional[str] = None
+    
+    # V2: Micro-Learning Fields
+    video_url: Optional[str] = None
+    quiz_question: Optional[str] = None
+    quiz_options: Optional[List[str]] = None
+    correct_answer: Optional[str] = None
+
+class LessonCreate(LessonBase):
+    pass
+
+class LessonResponse(LessonBase):
+    id: int
+    module_id: int
 
     class Config:
-        from_attributes = True  # Tells Pydantic to read data from SQLAlchemy objects
+        from_attributes = True
 
-# 2. Schema for a Module
-class ModuleResponse(BaseModel):
+# --- USER PROGRESS SCHEMAS ---
+class UserProgressBase(BaseModel):
+    user_id: int
+    lesson_id: int
+    repetitions: int
+    interval: int
+    ease_factor: float
+    next_review_date: date
+
+class UserProgressCreate(UserProgressBase):
+    pass
+
+class UserProgress(UserProgressBase):
     id: int
-    title: str
-    description: Optional[str] = None
 
     class Config:
         from_attributes = True
