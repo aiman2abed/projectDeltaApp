@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import date
 
@@ -37,6 +37,19 @@ class LessonResponse(LessonBase):
 
     class Config:
         from_attributes = True
+
+
+class ProgressUpdateRequest(BaseModel):
+    user_id: int
+    quality: int = Field(ge=0, le=5)
+
+class ProgressUpdateResponse(BaseModel):
+    status: str
+    message: str
+    next_review_date: date
+    interval: int
+    repetitions: int
+    ease_factor: float
 
 # --- USER PROGRESS SCHEMAS ---
 class UserProgressBase(BaseModel):
