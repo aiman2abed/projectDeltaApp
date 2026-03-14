@@ -3,17 +3,7 @@ import { useEffect, useState } from "react";
 import VideoPlayer from "@/components/VideoPlayer";
 import QuizEngine from "@/components/QuizEngine";
 import MathRenderer from "@/components/MathRenderer";
-
-interface Lesson {
-  id: number;
-  title: string;
-  content_text: string;
-  content_math?: string;
-  video_url?: string;
-  quiz_question?: string;
-  quiz_options?: string[];
-  correct_answer?: string;
-}
+import type { Lesson } from "@/types/api";
 
 export default function DiscoverFeed() {
   const [lessons, setLessons] = useState<Lesson[]>([]);

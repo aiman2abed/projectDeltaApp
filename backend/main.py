@@ -55,9 +55,13 @@ def get_all_lessons(db: Session = Depends(get_db)):
     lessons = db.query(models.Lesson).order_by(models.Lesson.id).all()
     return lessons
 
-@app.post("/api/progress/{lesson_id}")
-def mark_lesson_understood(lesson_id: int, db: Session = Depends(get_db)):
-    user_id = 1  # Hard-coded Guest User
+@app.post("/api/progress/{lesson_id}", response_model=schemas.ProgressUpdateResponse)
+def mark_lesson_understood(
+    lesson_id: int,
+    progress_payload: schemas.ProgressUpdateRequest,
+    db: Session = Depends(get_db),
+):
+    user_id = progress_payload.user_id
     
     # Check if this user has studied this lesson before
     progress = db.query(models.UserProgress).filter(
@@ -89,7 +93,20 @@ def mark_lesson_understood(lesson_id: int, db: Session = Depends(get_db)):
         progress.next_review_date = date.today() + timedelta(days=progress.interval)
 
     db.commit()
-    return {"status": "success", "message": "Progress recorded and next review scheduled."}
+
+    updated_progress = db.query(models.UserProgress).filter(
+        models.UserProgress.user_id == user_id,
+        models.UserProgress.lesson_id == lesson_id
+    ).first()
+
+    return {
+        "status": "success",
+        "message": "Progress recorded and next review scheduled.",
+        "next_review_date": updated_progress.next_review_date,
+        "interval": updated_progress.interval,
+        "repetitions": updated_progress.repetitions,
+        "ease_factor": updated_progress.ease_factor,
+    }
 
 @app.get("/api/progress/due")
 def get_due_reviews(db: Session = Depends(get_db)):

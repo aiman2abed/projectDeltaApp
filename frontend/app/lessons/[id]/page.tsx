@@ -4,18 +4,7 @@ import { useParams } from "next/navigation";
 import VideoPlayer from "@/components/VideoPlayer";
 import QuizEngine from "@/components/QuizEngine";
 import MathRenderer from "@/components/MathRenderer";
-
-// Define the structure of our V2 Lesson data
-interface Lesson {
-  id: number;
-  title: string;
-  content_text: string;
-  content_math?: string;
-  video_url?: string;
-  quiz_question?: string;
-  quiz_options?: string[];
-  correct_answer?: string;
-}
+import type { Lesson, ProgressUpdateRequest, ProgressUpdateResponse } from "@/types/api";
 
 export default function LessonPage() {
   const params = useParams();
@@ -34,14 +23,17 @@ export default function LessonPage() {
 
   const handleMarkAsUnderstood = async () => {
     // This remains the same as T8, sending the signal to the SRS engine
+    const payload: ProgressUpdateRequest = { user_id: 1, quality: 5 };
+
     const response = await fetch(`http://127.0.0.1:8000/api/progress/${params.id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: 1, quality: 5 }), 
+      body: JSON.stringify(payload),
     });
 
     if (response.ok) {
-      alert("Progress saved! The SRS engine has scheduled your next review.");
+      const data: ProgressUpdateResponse = await response.json();
+      alert(`${data.message} Next review: ${data.next_review_date}`);
     }
   };
 
