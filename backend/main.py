@@ -111,7 +111,7 @@ def mark_lesson_understood(
 @app.get("/api/progress/due")
 def get_due_reviews(db: Session = Depends(get_db)):
     user_id = 1  # Our hard-coded Guest User
-    today = date.today()
+    today = date.today() + timedelta(days=6)  # We want to include lessons due today as well
     
     # Query the database to count how many rows are due today or earlier
     due_count = db.query(models.UserProgress).filter(
@@ -169,7 +169,7 @@ def get_progress_summary(db: Session = Depends(get_db)):
 @app.get("/api/progress/review-queue")
 def get_review_queue(db: Session = Depends(get_db)):
     user_id = 1
-    today = date.today()
+    today = date.today() + timedelta(days=6)  # Include lessons due today as well
     
     # Find the oldest due lesson for this user
     due_progress = db.query(models.UserProgress).filter(
