@@ -23,3 +23,11 @@ export interface ProgressUpdateResponse {
   repetitions: number;
   ease_factor: number;
 }
+
+export interface ModuleProgressSummary {
+  module_id: number;
+  module_title: string;
+  total_lessons: number;
+  lessons_started: number;
+  mastery_score: number;
+}

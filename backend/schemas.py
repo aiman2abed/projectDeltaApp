@@ -68,3 +68,13 @@ class UserProgress(UserProgressBase):
 
     class Config:
         from_attributes = True
+
+class ModuleProgressSummary(BaseModel):
+    module_id: int
+    module_title: str
+    total_lessons: int
+    lessons_started : int
+    mastery_score : float
+
+    class Config:
+        from_attributes = True
