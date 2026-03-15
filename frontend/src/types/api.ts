@@ -24,6 +24,10 @@ export interface ProgressUpdateResponse {
   ease_factor: number;
 }
 
+export interface ReviewQueueResponse {
+  lesson_id: number | null;
+}
+
 export interface ModuleProgressSummary {
   module_id: number;
   module_title: string;

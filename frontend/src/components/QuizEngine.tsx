@@ -5,14 +5,14 @@ interface QuizEngineProps {
   question: string;
   options: string[];
   correctAnswer: string;
-  onSuccess: () => void; // The flare gun to alert the Motherboard
+  onSuccess: (isFirstTry: boolean) => void;
 }
 
 export default function QuizEngine({ question, options, correctAnswer, onSuccess }: QuizEngineProps) {
-  // Local state to track what the user is doing
   const [selected, setSelected] = useState<string | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [hadIncorrectAttempt, setHadIncorrectAttempt] = useState(false);
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -35,10 +35,14 @@ export default function QuizEngine({ question, options, correctAnswer, onSuccess
         clearTimeout(successTimeoutRef.current);
       }
 
+      const isFirstTry = !hadIncorrectAttempt;
       successTimeoutRef.current = setTimeout(() => {
-        onSuccess(); // Fire the flare to the parent page after a short success pause.
+        onSuccess(isFirstTry);
       }, 1500);
+      return;
     }
+
+    setHadIncorrectAttempt(true);
   };
 
   return (
@@ -48,7 +52,6 @@ export default function QuizEngine({ question, options, correctAnswer, onSuccess
 
       <div className="space-y-3 mb-6">
         {options.map((option, index) => {
-          // Dynamic styling based on state
           let buttonStyle = "border-gray-300 text-gray-700 hover:bg-blue-50";
 
           if (selected === option) {
@@ -65,10 +68,9 @@ export default function QuizEngine({ question, options, correctAnswer, onSuccess
             <button
               key={index}
               onClick={() => {
-                // Prevent changing answer after submitting correctly
                 if (isCorrect) return;
                 setSelected(option);
-                setHasSubmitted(false); // Reset if they try again
+                setHasSubmitted(false);
               }}
               className={`w-full text-left p-3 rounded-md border transition-all duration-200 ${buttonStyle}`}
             >
