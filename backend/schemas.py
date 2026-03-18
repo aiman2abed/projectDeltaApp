@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import date
 
+
 # --- MODULE SCHEMAS ---
 class ModuleBase(BaseModel):
     title: str
@@ -15,6 +16,10 @@ class ModuleResponse(ModuleBase):
 
     class Config:
         from_attributes = True
+
+class ModuleUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
 
 # --- LESSON SCHEMAS ---
 class LessonBase(BaseModel):
@@ -38,6 +43,14 @@ class LessonResponse(LessonBase):
     class Config:
         from_attributes = True
 
+class LessonUpdate(BaseModel):
+    title: Optional[str] = None
+    content_text: Optional[str] = None
+    content_math: Optional[str] = None
+    video_url: Optional[str] = None
+    quiz_question: Optional[str] = None
+    quiz_options: Optional[List[str]] = None # Or Optional[str] depending on how you store it
+    correct_answer: Optional[str] = None
 
 class ProgressUpdateRequest(BaseModel):
     user_id: int

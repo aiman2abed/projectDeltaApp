@@ -10,14 +10,21 @@ export default function DiscoverFeed() {
   const [loading, setLoading] = useState(true);
   const sectionRefs = useRef<Array<HTMLElement | null>>([]);
 
-  useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/lessons")
-      .then((res) => res.json())
+useEffect(() => {
+    // Calling our new Smart Algorithm endpoint instead of the raw lessons list
+    fetch("http://127.0.0.1:8000/api/feed/smart")
+      .then((res) => {
+        if (!res.ok) throw new Error("Feed unavailable");
+        return res.json();
+      })
       .then((data) => {
-        setLessons(data);
+        setLessons(data); // The backend already shuffled and ranked them!
         setLoading(false);
       })
-      .catch((err) => console.error("Discover Feed Error:", err));
+      .catch((err) => {
+        console.error("Error loading smart feed:", err);
+        setLoading(false);
+      });
   }, []);
 
   // Upgraded to handle the DB save AND the scroll

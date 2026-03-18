@@ -2,8 +2,6 @@ from sqlalchemy import Column, Integer, String, Text, ForeignKey, Float, Date, J
 from sqlalchemy.orm import relationship
 from database import Base
 
-
-
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -16,8 +14,8 @@ class Module(Base):
     title = Column(String(100), nullable=False)
     description = Column(Text)
     
-    # This creates a link to fetch all lessons inside a module
-    lessons = relationship("Lesson", back_populates="module")
+    # PARENT: "If this module dies, delete its child lessons."
+    lessons = relationship("Lesson", back_populates="module", cascade="all, delete-orphan")
 
 class Lesson(Base):
     __tablename__ = "lessons"
@@ -32,7 +30,11 @@ class Lesson(Base):
     quiz_options = Column(JSON, nullable=True)
     correct_answer = Column(String, nullable=True)
     
+    # CHILD: Just links back to the parent. No cascade here!
     module = relationship("Module", back_populates="lessons")
+    
+    # PARENT: "If this lesson dies, delete the progress records of anyone who studied it."
+    progress_records = relationship("UserProgress", back_populates="lesson", cascade="all, delete-orphan")
 
 class UserProgress(Base):
     __tablename__ = "user_progress"
@@ -43,3 +45,6 @@ class UserProgress(Base):
     interval = Column(Integer, default=0)
     repetitions = Column(Integer, default=0)
     next_review_date = Column(Date)
+    
+    # CHILD: Just links back to the lesson.
+    lesson = relationship("Lesson", back_populates="progress_records")
