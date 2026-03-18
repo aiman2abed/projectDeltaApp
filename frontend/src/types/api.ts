@@ -1,3 +1,9 @@
+export interface Module {
+  id: number;
+  title: string;
+  description: string;
+}
+
 export interface Lesson {
   id: number;
   module_id: number;

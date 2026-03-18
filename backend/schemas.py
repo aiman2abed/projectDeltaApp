@@ -18,6 +18,7 @@ class ModuleResponse(ModuleBase):
 
 # --- LESSON SCHEMAS ---
 class LessonBase(BaseModel):
+    module_id: int
     title: str
     content_text: str
     content_math: Optional[str] = None
@@ -33,7 +34,6 @@ class LessonCreate(LessonBase):
 
 class LessonResponse(LessonBase):
     id: int
-    module_id: int
 
     class Config:
         from_attributes = True
