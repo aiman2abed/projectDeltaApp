@@ -70,13 +70,14 @@ export default function DiscoverFeed() {
           <div className="max-w-md w-full bg-white rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col h-[85vh] border-4 border-gray-900">
             <div className="px-6 py-4 bg-blue-900 text-white flex justify-between items-center border-b border-blue-800">
               <span className="text-[10px] font-black tracking-widest uppercase italic">Project Delta</span>
-              <span className="text-[10px] bg-blue-700 px-2 py-0.5 rounded-full font-bold">{lesson.id} / 12</span>
+              {/* <span className="text-[10px] bg-blue-700 px-2 py-0.5 rounded-full font-bold">{lesson.id} / 12</span> */}
+              <span className="text-[10px] bg-blue-700 px-2 py-0.5 rounded-full font-bold">{index + 1} / {lessons.length}</span>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               <h2 className="text-2xl font-black text-gray-900 leading-tight">{lesson.title}</h2>
 
-              {lesson.video_url && <VideoPlayer url={lesson.video_url} />}
+              {lesson.video_url && <VideoPlayer url={lesson.video_url} mode="feed" />}
 
               <div className="prose prose-sm text-gray-700">
                 <p className="leading-relaxed">{lesson.content_text}</p>

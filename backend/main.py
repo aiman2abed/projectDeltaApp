@@ -66,7 +66,14 @@ def get_lesson(lesson_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Lesson not found")
         
     return lesson
-# Add this above or below your other lesson routes
+
+@app.get("/api/modules/{module_id}/lessons", response_model=List[schemas.LessonResponse])
+def get_lessons_for_module(module_id: int, db: Session = Depends(get_db)):
+    """Fetch all lessons that belong to a specific module."""
+    lessons = db.query(models.Lesson).filter(models.Lesson.module_id == module_id).order_by(models.Lesson.id).all()
+    return lessons
+
+
 @app.get("/api/lessons", response_model=List[schemas.LessonResponse])
 def get_all_lessons(db: Session = Depends(get_db)):
     # This query grabs every single row in the lessons table

@@ -45,7 +45,7 @@ export default function LessonPage() {
       <h1 className="text-3xl font-bold text-blue-900 mb-6">{lesson.title}</h1>
 
       {/* 1. VIDEO COMPONENT (The Reel) */}
-      {lesson.video_url && <VideoPlayer url={lesson.video_url} />}
+      {lesson.video_url && <VideoPlayer url={lesson.video_url} mode="focus" />}
 
       {/* 2. TEXT & MATH CONTENT */}
       <div className="prose prose-blue max-w-none mb-8 bg-gray-50 p-6 rounded-lg border border-gray-200">
