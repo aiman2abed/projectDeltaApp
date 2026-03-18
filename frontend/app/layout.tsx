@@ -43,6 +43,10 @@ export default function RootLayout({
                 <Link href="/modules" className="hover:text-blue-200 px-3 py-2 rounded-md text-sm font-medium">
                   All Modules
                 </Link>
+
+                <Link href="/admin" className="hover:text-blue-200 px-3 py-2 rounded-md text-sm font-medium">
+                  Admin Studio
+                </Link>
               </div>
               {/* ------------------------- */}
             </div>
