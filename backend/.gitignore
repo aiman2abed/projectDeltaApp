@@ -16,3 +16,6 @@ __pycache__/
 # 📉 Databases (If you ever used local SQLite)
 *.sqlite3
 *.db
+
+#for opensource usage
+!.env.example
