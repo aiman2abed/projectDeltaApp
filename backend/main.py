@@ -33,6 +33,24 @@ def read_root():
 
 # --- NEW ENDPOINTS BELOW ---
 
+
+@app.post("/api/modules", response_model=schemas.ModuleResponse)
+def create_module(module: schemas.ModuleCreate, db: Session = Depends(get_db)):
+    new_module = models.Module(**module.model_dump())
+    db.add(new_module)
+    db.commit()
+    db.refresh(new_module)
+    return new_module
+
+
+@app.post("/api/lessons", response_model=schemas.LessonResponse)
+def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(get_db)):
+    new_lesson = models.Lesson(**lesson.model_dump())
+    db.add(new_lesson)
+    db.commit()
+    db.refresh(new_lesson)
+    return new_lesson
+
 @app.get("/api/modules", response_model=List[schemas.ModuleResponse])
 def get_modules(db: Session = Depends(get_db)):
     """Fetch all available engineering modules."""
