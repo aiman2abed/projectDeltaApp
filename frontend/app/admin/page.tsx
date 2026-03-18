@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase";
 
 interface Module {
   id: number;
@@ -45,6 +47,11 @@ const initialLessonForm: LessonFormState = {
 };
 
 export default function AdminStudioPage() {
+  const router = useRouter();
+  const supabase = createClient();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+
   // --- CORE STATE ---
   const [activeTab, setActiveTab] = useState<"create" | "manage">("create");
   const [modules, setModules] = useState<Module[]>([]);
@@ -54,7 +61,7 @@ export default function AdminStudioPage() {
   const [moduleForm, setModuleForm] = useState<ModuleFormState>(initialModuleForm);
   const [lessonForm, setLessonForm] = useState<LessonFormState>(initialLessonForm);
   
-  // --- EDIT MODE STATE (The secret sauce for reusability) ---
+  // --- EDIT MODE STATE ---
   const [editingModuleId, setEditingModuleId] = useState<number | null>(null);
   const [editingLessonId, setEditingLessonId] = useState<number | null>(null);
 
@@ -68,11 +75,50 @@ export default function AdminStudioPage() {
   const [moduleStatus, setModuleStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [lessonStatus, setLessonStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  // Fetch Modules on mount
+  // ==========================================
+  // AUTHORIZATION GATEKEEPER
+  // ==========================================
+  useEffect(() => {
+    const verifyAdmin = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/users/me`, {
+          headers: { "Authorization": `Bearer ${session.access_token}` }
+        });
+
+        const data = await res.json();
+
+        if (data.role !== "admin") {
+          router.push("/"); // Kick them out
+        } else {
+          setSessionToken(session.access_token);
+          setIsAuthorized(true);
+        }
+      } catch (err) {
+        console.error("Auth verification failed", err);
+        router.push("/");
+      }
+    };
+
+    verifyAdmin();
+  }, [router, supabase]);
+
+  // ==========================================
+  // DATA FETCHING (Requires sessionToken)
+  // ==========================================
   const fetchModules = useCallback(async () => {
+    if (!sessionToken) return;
     setLoadingModules(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/modules`);
+      const response = await fetch(`${API_BASE_URL}/api/modules`, {
+        headers: { "Authorization": `Bearer ${sessionToken}` }
+      });
       if (response.ok) {
         const data: Module[] = await response.json();
         setModules(data);
@@ -82,17 +128,21 @@ export default function AdminStudioPage() {
     } finally {
       setLoadingModules(false);
     }
-  }, []);
+  }, [sessionToken]);
 
   useEffect(() => {
-    void fetchModules();
-  }, [fetchModules]);
+    if (isAuthorized) {
+      void fetchModules();
+    }
+  }, [isAuthorized, fetchModules]);
 
-  // Fetch Lessons for the Manage Tab when a module is clicked
   const fetchManageLessons = async (moduleId: number) => {
+    if (!sessionToken) return;
     setSelectedManageModuleId(moduleId);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/modules/${moduleId}/lessons`);
+      const res = await fetch(`${API_BASE_URL}/api/modules/${moduleId}/lessons`, {
+        headers: { "Authorization": `Bearer ${sessionToken}` }
+      });
       if (res.ok) {
         setManageLessons(await res.json());
       }
@@ -112,6 +162,8 @@ export default function AdminStudioPage() {
 
   const handleModuleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!sessionToken) return;
+    
     setModuleSubmitting(true);
     setModuleStatus(null);
 
@@ -122,7 +174,10 @@ export default function AdminStudioPage() {
     try {
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionToken}`
+        },
         body: JSON.stringify(moduleForm),
       });
 
@@ -140,9 +195,14 @@ export default function AdminStudioPage() {
   };
 
   const handleDeleteModule = async (id: number) => {
+    if (!sessionToken) return;
     if (!window.confirm("WARNING: This will delete the module AND all lessons inside it. Are you sure?")) return;
+    
     try {
-      await fetch(`${API_BASE_URL}/api/modules/${id}`, { method: "DELETE" });
+      await fetch(`${API_BASE_URL}/api/modules/${id}`, { 
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${sessionToken}` }
+      });
       fetchModules();
       if (selectedManageModuleId === id) setSelectedManageModuleId(null);
     } catch (error) {
@@ -163,6 +223,8 @@ export default function AdminStudioPage() {
 
   const handleLessonSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!sessionToken) return;
+
     setLessonSubmitting(true);
     setLessonStatus(null);
 
@@ -184,14 +246,17 @@ export default function AdminStudioPage() {
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionToken}`
+        },
         body: JSON.stringify(payload),
       });
 
       if (!response.ok) throw new Error("Lesson save failed.");
 
       setLessonStatus({ type: "success", message: `Lesson ${isEditing ? "updated" : "created"} successfully!` });
-      setLessonForm({ ...initialLessonForm, module_id: lessonForm.module_id }); // Keep module selected
+      setLessonForm({ ...initialLessonForm, module_id: lessonForm.module_id }); 
       setEditingLessonId(null);
     } catch (error) {
       setLessonStatus({ type: "error", message: "Error saving lesson. Try again." });
@@ -201,10 +266,15 @@ export default function AdminStudioPage() {
   };
 
   const handleDeleteLesson = async (lessonId: number, moduleId: number) => {
+    if (!sessionToken) return;
     if (!window.confirm("Delete this lesson permanently?")) return;
+    
     try {
-      await fetch(`${API_BASE_URL}/api/lessons/${lessonId}`, { method: "DELETE" });
-      fetchManageLessons(moduleId); // Refresh lesson list
+      await fetch(`${API_BASE_URL}/api/lessons/${lessonId}`, { 
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${sessionToken}` }
+      });
+      fetchManageLessons(moduleId);
     } catch (error) {
       alert("Failed to delete lesson.");
     }
@@ -232,6 +302,8 @@ export default function AdminStudioPage() {
     setModuleForm(initialModuleForm);
     setLessonForm(initialLessonForm);
   };
+
+  if (!isAuthorized) return <div className="h-screen flex items-center justify-center font-mono text-blue-900 font-bold tracking-widest uppercase">Verifying Clearances...</div>;
 
   return (
     <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">

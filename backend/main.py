@@ -6,8 +6,11 @@ from datetime import date, timedelta
 import random
 import models, schemas
 from database import SessionLocal
+from auth import get_current_user, get_admin_user # Add get_admin_user
+# 1. Import the gatekeeper
+from auth import get_current_user 
 
-app = FastAPI(title="Delta EE Microlearning API")
+app = FastAPI(title="Spirelay")
 
 # ==========================================
 # 1. MIDDLEWARE & DEPENDENCIES
@@ -35,8 +38,16 @@ def get_db():
 
 @app.get("/")
 def read_root():
-    return {"status": "success", "message": "The EE Microlearning API is live!"}
+    return {"status": "success", "message": "The Spirelay API is live!"}
 
+@app.get("/api/users/me")
+def get_user_profile(current_user = Depends(get_current_user)):
+    """Allows the Next.js frontend to check if the user is an admin or not."""
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "role": current_user.role
+    }
 
 # ==========================================
 # 3. MODULES API (CRUD & Relationships)
@@ -53,7 +64,7 @@ def get_lessons_for_module(module_id: int, db: Session = Depends(get_db)):
     return db.query(models.Lesson).filter(models.Lesson.module_id == module_id).order_by(models.Lesson.id).all()
 
 @app.post("/api/modules", response_model=schemas.ModuleResponse)
-def create_module(module: schemas.ModuleCreate, db: Session = Depends(get_db)):
+def create_module(module: schemas.ModuleCreate, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
     """Create a new engineering module."""
     new_module = models.Module(**module.model_dump())
     db.add(new_module)
@@ -62,7 +73,7 @@ def create_module(module: schemas.ModuleCreate, db: Session = Depends(get_db)):
     return new_module
 
 @app.put("/api/modules/{module_id}", response_model=schemas.ModuleResponse)
-def update_module(module_id: int, module_update: schemas.ModuleUpdate, db: Session = Depends(get_db)):
+def update_module(module_id: int, module_update: schemas.ModuleUpdate, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
     """Update an existing module (Partial updates allowed)."""
     db_module = db.query(models.Module).filter(models.Module.id == module_id).first()
     if not db_module:
@@ -78,7 +89,7 @@ def update_module(module_id: int, module_update: schemas.ModuleUpdate, db: Sessi
     return db_module
 
 @app.delete("/api/modules/{module_id}")
-def delete_module(module_id: int, db: Session = Depends(get_db)):
+def delete_module(module_id: int, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
     """Delete a module AND all its cascading lessons/progress records."""
     db_module = db.query(models.Module).filter(models.Module.id == module_id).first()
     if not db_module:
@@ -143,7 +154,7 @@ def delete_lesson(lesson_id: int, db: Session = Depends(get_db)):
 
 
 # ==========================================
-# 5. SPACED REPETITION PROGRESS API
+# 5. SPACED REPETITION PROGRESS API (PROTECTED)
 # ==========================================
 
 @app.post("/api/progress/{lesson_id}", response_model=schemas.ProgressUpdateResponse)
@@ -151,9 +162,12 @@ def mark_lesson_understood(
     lesson_id: int,
     progress_payload: schemas.ProgressUpdateRequest,
     db: Session = Depends(get_db),
+    current_user = Depends(get_current_user) # Gatekeeper active
 ):
     """Process SRS algorithm updates when a user passes a lesson quiz."""
-    user_id = progress_payload.user_id
+    # We now strictly trust the token's UUID over the payload's user_id
+    user_id = current_user.id
+    
     progress = db.query(models.UserProgress).filter(
         models.UserProgress.user_id == user_id,
         models.UserProgress.lesson_id == lesson_id
@@ -194,9 +208,12 @@ def mark_lesson_understood(
     }
 
 @app.get("/api/progress/due")
-def get_due_reviews(db: Session = Depends(get_db)):
+def get_due_reviews(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
     """Calculate how many reviews are currently due for the dashboard badge."""
-    user_id = 1  # Hard-coded Guest User
+    user_id = current_user.id
     today = date.today() + timedelta(days=6)
     
     due_count = db.query(models.UserProgress).filter(
@@ -207,9 +224,12 @@ def get_due_reviews(db: Session = Depends(get_db)):
     return {"due_count": due_count}
 
 @app.get("/api/progress/summary", response_model=List[schemas.ModuleProgressSummary])
-def get_progress_summary(db: Session = Depends(get_db)):
+def get_progress_summary(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
     """Generate the Mastery Scores for the home dashboard charts."""
-    user_id = 1 
+    user_id = current_user.id
     modules = db.query(models.Module).all()
     summary_data = []
     
@@ -243,9 +263,12 @@ def get_progress_summary(db: Session = Depends(get_db)):
     return summary_data
 
 @app.get("/api/progress/review-queue")
-def get_review_queue(db: Session = Depends(get_db)):
+def get_review_queue(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
     """Fetch the next lesson ID that is due for review."""
-    user_id = 1
+    user_id = current_user.id
     today = date.today() + timedelta(days=6) 
     
     due_progress = db.query(models.UserProgress).filter(
@@ -259,11 +282,14 @@ def get_review_queue(db: Session = Depends(get_db)):
     return {"lesson_id": due_progress.lesson_id}
 
 @app.get("/api/feed/smart", response_model=List[schemas.LessonResponse])
-def get_smart_feed(db: Session = Depends(get_db)):
-    user_id = 1  # Still hardcoded for now
+def get_smart_feed(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    user_id = current_user.id
     today = date.today()
 
-    # 1. Fetch all lessons and all user progress
+    # 1. Fetch all lessons and all user progress for THIS specific user
     all_lessons = db.query(models.Lesson).all()
     user_progress = db.query(models.UserProgress).filter(models.UserProgress.user_id == user_id).all()
     
@@ -293,7 +319,6 @@ def get_smart_feed(db: Session = Depends(get_db)):
     raw_feed = bucket_review + bucket_new + bucket_fallback
     
     # 5. Apply Diversity Filter (Module De-duplication)
-    # This ensures no two lessons from the same module appear back-to-back
     smart_feed = []
     if raw_feed:
         smart_feed.append(raw_feed.pop(0))

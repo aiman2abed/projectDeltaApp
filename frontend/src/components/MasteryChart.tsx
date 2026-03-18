@@ -7,8 +7,8 @@ interface MasteryChartProps {
 }
 
 export default function MasteryChart({ data }: MasteryChartProps) {
-  if (!data || data.length === 0) {
-    return <div className="text-gray-500 italic">No progress data available.</div>;
+if (!Array.isArray(data) || data.length === 0) {
+      return <div className="text-gray-500 italic">No progress data available.</div>;
   }
 
   return (
