@@ -58,8 +58,8 @@ export default function SignupPage() {
                 <Image
                   src="/spirelay_logo_noBg.png"
                   alt="Spirelay Logo"
-                  width={500}
-                  height={500}
+                  width={900}
+                  height={900}
                   className="object-contain w-full h-auto"
                   priority
                 />
