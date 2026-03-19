@@ -71,7 +71,8 @@ export default function SignupPage() {
             Adaptive Engineering Memory
           </p>
 
-          <p className="max-w-sm mx-auto text-lg text-slate-800 font-medium leading-8">
+          <p className="max-w-lg mx-auto text-lg text-slate-800 font-large leading-8">
+            reel after reel, short after short, how many engineering concepts can you "export"?<br></br>
             The intelligent platform for building long-term memory in Electrical Engineering.
           </p>
         </div>
