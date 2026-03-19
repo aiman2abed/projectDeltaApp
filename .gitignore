@@ -25,3 +25,6 @@ Thumbs.db
 
 #for opensource usage
 !.env.example
+
+#logo
+/Users/aimanabed/Desktop/Project_Delta_App/Spirelay_Logo.png
