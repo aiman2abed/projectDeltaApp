@@ -12,3 +12,8 @@ Open a terminal and navigate to the `backend` folder:
 cd backend
 source venv/bin/activate
 uvicorn main:app --reload
+
+## 🛠️ Current System Status
+- **Authentication:** Supabase + JWT (Operational)
+- **Database:** PostgreSQL Cloud (Operational)
+- **CI/CD:** GitHub Actions (Operational)
