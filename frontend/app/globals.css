@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+@theme {
+  /* Define the animation class name and duration */
+  --animate-blob: blob 7s infinite;
+
+  /* Define the actual keyframes for the animation */
+  @keyframes blob {
+    20% { transform: translate(0px, 0px) scale(1); }
+    50% { transform: translate(30px, -50px) scale(1.1); }
+    80% { transform: translate(-20px, 20px) scale(0.9); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
+}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase"; // Note: Adjusted to match your src folder structure
 
 interface Module {
   id: number;
@@ -38,6 +38,12 @@ interface LessonFormState {
   correct_answer: string;
 }
 
+interface UserRecord {
+  id: string;
+  email: string;
+  role: string;
+}
+
 const API_BASE_URL = "http://127.0.0.1:8000";
 
 const initialModuleForm: ModuleFormState = { title: "", description: "" };
@@ -52,8 +58,12 @@ export default function AdminStudioPage() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
 
+  // --- USER CONTROL STATE ---
+  const [users, setUsers] = useState<UserRecord[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
   // --- CORE STATE ---
-  const [activeTab, setActiveTab] = useState<"create" | "manage">("create");
+  const [activeTab, setActiveTab] = useState<"create" | "manage" | "users">("create");
   const [modules, setModules] = useState<Module[]>([]);
   const [loadingModules, setLoadingModules] = useState(true);
 
@@ -74,6 +84,7 @@ export default function AdminStudioPage() {
   const [lessonSubmitting, setLessonSubmitting] = useState(false);
   const [moduleStatus, setModuleStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [lessonStatus, setLessonStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
 
   // ==========================================
   // AUTHORIZATION GATEKEEPER
@@ -155,6 +166,47 @@ export default function AdminStudioPage() {
     () => lessonForm.quiz_options.split(",").map((option) => option.trim()).filter(Boolean),
     [lessonForm.quiz_options]
   );
+
+  // --- USER FETCHING & MANAGEMENT ---
+  const fetchUsers = useCallback(async () => {
+    if (!sessionToken) return;
+    setLoadingUsers(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/users`, {
+        headers: { "Authorization": `Bearer ${sessionToken}` }
+      });
+      if (res.ok) setUsers(await res.json());
+    } catch (error) {
+      console.error("Failed to fetch users", error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  }, [sessionToken]);
+
+  useEffect(() => {
+    if (activeTab === "users") fetchUsers();
+  }, [activeTab, fetchUsers]);
+
+  const handleToggleRole = async (user: UserRecord) => {
+    if (!sessionToken) return;
+    const newRole = user.role === "admin" ? "user" : "admin";
+    if (!window.confirm(`Change ${user.email} to ${newRole}?`)) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/users/${user.id}/role`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionToken}` 
+        },
+        body: JSON.stringify({ role: newRole }),
+      });
+
+      if (res.ok) fetchUsers(); // Refresh list
+    } catch (error) {
+      alert("Failed to update role.");
+    }
+  };
 
   // ==========================================
   // MODULE CRUD HANDLERS
@@ -325,6 +377,12 @@ export default function AdminStudioPage() {
           >
             🗂️ Manage Catalog
           </button>
+          <button 
+            onClick={() => { setActiveTab("users"); cancelEdit(); }}
+            className={`px-4 py-3 rounded-xl text-left font-medium transition ${activeTab === "users" ? "bg-cyan-600 text-white" : "hover:bg-white/10 text-slate-300"}`}
+          >
+            👥 Manage Users
+          </button>
         </div>
 
         <div className="mt-auto pt-8">
@@ -491,6 +549,51 @@ export default function AdminStudioPage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* ==========================================
+            TAB 3: MANAGE USERS
+            ========================================== */}
+        {activeTab === "users" && (
+          <div>
+            <h2 className="text-2xl font-semibold text-slate-900 border-b pb-4 mb-6">User Management</h2>
+            
+            {loadingUsers ? (
+              <div className="text-slate-500 animate-pulse py-4">Loading users...</div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                <table className="w-full text-left border-collapse bg-white">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</th>
+                      <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">System Role</th>
+                      <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {users.map((user) => (
+                      <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 px-6 font-medium text-slate-700">{user.email}</td>
+                        <td className="py-4 px-6">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${user.role === 'admin' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-right">
+                          <button 
+                            onClick={() => handleToggleRole(user)}
+                            className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors underline-offset-2 hover:underline bg-blue-50 px-3 py-1.5 rounded-lg"
+                          >
+                            Make {user.role === 'admin' ? 'User' : 'Admin'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </section>

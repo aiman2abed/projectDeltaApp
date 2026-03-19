@@ -44,10 +44,7 @@ class Lesson(Base):
 class UserProgress(Base):
     __tablename__ = "user_progress"
     id = Column(Integer, primary_key=True, index=True)
-    
-    # 2. Changed to UUID so it can properly link to the new User table
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
-    
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"))
     lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="CASCADE"))
     ease_factor = Column(Float, default=2.5)
     interval = Column(Integer, default=0)

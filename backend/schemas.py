@@ -1,7 +1,19 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import date
+from uuid import UUID
 
+
+# --- USER SCHEMAS ---
+class UserBase(BaseModel):
+    email: str
+    role: str
+
+class User(UserBase):
+    id: UUID
+
+    class Config:
+        from_attributes = True
 
 # --- MODULE SCHEMAS ---
 class ModuleBase(BaseModel):
@@ -53,7 +65,7 @@ class LessonUpdate(BaseModel):
     correct_answer: Optional[str] = None
 
 class ProgressUpdateRequest(BaseModel):
-    user_id: int
+    user_id: str
     quality: int = Field(ge=0, le=5)
 
 class ProgressUpdateResponse(BaseModel):
@@ -66,7 +78,7 @@ class ProgressUpdateResponse(BaseModel):
 
 # --- USER PROGRESS SCHEMAS ---
 class UserProgressBase(BaseModel):
-    user_id: int
+    user_id: str
     lesson_id: int
     repetitions: int
     interval: int

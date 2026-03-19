@@ -338,3 +338,31 @@ def get_smart_feed(
                 smart_feed.append(raw_feed.pop(0))
 
     return smart_feed
+
+# ==========================================
+# 6. ADMIN USER MANAGEMENT (PROTECTED)
+# ==========================================
+@app.get("/api/users", response_model=list[schemas.User])
+def get_all_users(db: Session = Depends(get_db), admin: models.User = Depends(get_admin_user)):
+    """Fetch all users synced in the database. Restricted to Admins."""
+    return db.query(models.User).all()
+
+@app.put("/api/users/{user_id}/role")
+def update_user_role(
+    user_id: str, 
+    role_update: dict, 
+    db: Session = Depends(get_db), 
+    admin: models.User = Depends(get_admin_user)
+):
+    """Update a specific user's role (admin/user). Restricted to Admins."""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    new_role = role_update.get("role")
+    if new_role not in ["admin", "user"]:
+        raise HTTPException(status_code=400, detail="Invalid role")
+        
+    user.role = new_role
+    db.commit()
+    return {"message": f"User {user.email} updated to {new_role}"}

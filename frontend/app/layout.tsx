@@ -139,13 +139,15 @@ export default function RootLayout({
                   <Link href="/modules" className="hover:text-blue-200 px-3 py-2 rounded-md text-sm font-medium">
                     All Modules
                   </Link>
+                  <Link href="/settings" className="text-slate-500 hover:text-slate-900 font-medium transition-colors">
+                      Settings
+                    </Link>
 
                   {role === "admin" && (
                     <Link href="/admin" className="text-red-400 font-bold px-3 py-2 rounded-md text-sm hover:text-red-300 border-l border-blue-800 ml-2 pl-4">
                       Admin Studio
                     </Link>
                   )}
-
                   <button 
                     onClick={handleLogout} 
                     className="ml-4 bg-transparent border border-blue-700 text-blue-200 hover:text-white hover:border-white px-3 py-1.5 rounded-md text-sm font-medium transition cursor-pointer"

@@ -5,7 +5,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 import QuizEngine from "@/components/QuizEngine";
 import MathRenderer from "@/components/MathRenderer";
 import type { Lesson, ProgressUpdateRequest } from "@/types/api";
-import { createClient } from "@/lib/supabase"; // Import Supabase Client
+import { createClient } from "@/lib/supabase";
 
 export default function DiscoverFeed() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -17,17 +17,14 @@ export default function DiscoverFeed() {
 
   useEffect(() => {
     const fetchSmartFeed = async () => {
-      // 1. Get the current user session from Supabase
       const { data: { session } } = await supabase.auth.getSession();
       
-      // If the user isn't logged in, send them to the login page
       if (!session) {
         router.push("/login");
         return;
       }
 
       try {
-        // 2. Attach the JWT token to the headers
         const res = await fetch("http://127.0.0.1:8000/api/feed/smart", {
           headers: {
             "Authorization": `Bearer ${session.access_token}`,
@@ -38,7 +35,7 @@ export default function DiscoverFeed() {
         if (!res.ok) throw new Error("Feed unavailable");
         
         const data = await res.json();
-        setLessons(data); // The backend already shuffled and ranked them!
+        setLessons(data); 
       } catch (err) {
         console.error("Error loading smart feed:", err);
       } finally {
@@ -49,16 +46,13 @@ export default function DiscoverFeed() {
     fetchSmartFeed();
   }, [router, supabase]);
 
-  // Upgraded to handle the DB save AND the scroll
   const handleLessonSuccess = async (lessonIndex: number, lessonId: number, isFirstTry: boolean) => {
-    // We fetch the session dynamically here to ensure the token hasn't expired while they were studying
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    // 1. Save progress silently in the background
     const payload: ProgressUpdateRequest = {
-      user_id: 1, // Dummy ID: The backend ignores this and securely uses the UUID from the token
-      quality: isFirstTry ? 5 : 3, // Perfect score if first try, lower score if they guessed
+      user_id: 1, 
+      quality: isFirstTry ? 5 : 3, 
     };
 
     try {
@@ -66,16 +60,14 @@ export default function DiscoverFeed() {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}` // Attach token for progress saving!
+          "Authorization": `Bearer ${session.access_token}` 
         },
         body: JSON.stringify(payload),
       });
-      console.log(`Successfully synced progress for lesson ${lessonId}`);
     } catch (error) {
       console.error("Failed to sync progress:", error);
     }
 
-    // 2. Trigger the Auto-Swipe physics
     const nextSection = sectionRefs.current[lessonIndex + 1];
     if (!nextSection) return;
 
@@ -88,40 +80,53 @@ export default function DiscoverFeed() {
 
   if (loading)
     return (
-      <div className="h-screen flex items-center justify-center bg-black text-white font-mono uppercase tracking-[0.2rem]">
-        Authenticating Spirelay Stream...
+      <div className="h-[calc(100vh-64px)] flex flex-col items-center justify-center bg-slate-900 text-white">
+        <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+        <p className="font-mono text-sm uppercase tracking-widest text-slate-400">Tuning the Algorithm...</p>
       </div>
     );
 
   return (
-    <main className="h-screen overflow-y-scroll snap-y snap-mandatory bg-black scrollbar-hide">
+    // Note the dynamic height calc to account for the layout navbar and prevent double-scrolling
+    <main className="h-[calc(100vh-64px)] overflow-y-scroll snap-y snap-mandatory bg-gradient-to-b from-slate-900 to-slate-950 scrollbar-hide">
       {lessons.map((lesson, index) => (
         <section
           key={lesson.id}
           ref={(element) => {
             sectionRefs.current[index] = element;
           }}
-          className="h-screen w-full snap-start flex flex-col items-center justify-center p-4"
+          className="h-[calc(100vh-64px)] w-full snap-start flex flex-col items-center justify-center p-4 sm:p-6"
         >
-          <div className="max-w-md w-full bg-white rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col h-[85vh] border-4 border-gray-900">
-            <div className="px-6 py-4 bg-blue-900 text-white flex justify-between items-center border-b border-blue-800">
-              <span className="text-[10px] font-black tracking-widest uppercase italic">Spirelay</span>
-              <span className="text-[10px] bg-blue-700 px-2 py-0.5 rounded-full font-bold">{index + 1} / {lessons.length}</span>
+          {/* Enhanced Glassmorphism & Shadow Card */}
+          <div className="max-w-md w-full bg-white rounded-[2rem] overflow-hidden shadow-2xl shadow-blue-900/20 ring-1 ring-white/10 flex flex-col h-[85vh] transition-all">
+            
+            {/* Cleaner Header without the debug counter */}
+            <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center z-10">
+              <span className="text-xs font-black tracking-widest uppercase text-slate-400">Spirelay <span className="text-blue-500">Stream</span></span>
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              <h2 className="text-2xl font-black text-gray-900 leading-tight">{lesson.title}</h2>
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
+              <h2 className="text-2xl font-extrabold text-slate-900 leading-tight tracking-tight">{lesson.title}</h2>
 
-              {lesson.video_url && <VideoPlayer url={lesson.video_url} mode="feed" />}
+              {lesson.video_url && (
+                <div className="rounded-2xl overflow-hidden shadow-sm border border-slate-100">
+                  <VideoPlayer url={lesson.video_url} mode="feed" />
+                </div>
+              )}
 
-              <div className="prose prose-sm text-gray-700">
+              <div className="prose prose-sm prose-slate text-slate-600">
                 <p className="leading-relaxed">{lesson.content_text}</p>
               </div>
 
-              {lesson.content_math && <MathRenderer formula={lesson.content_math} />}
+              {lesson.content_math && (
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <MathRenderer formula={lesson.content_math} />
+                </div>
+              )}
 
               {lesson.quiz_question && (
-                <div className="pt-4 border-t border-gray-100">
+                <div className="pt-6 mt-6 border-t border-slate-100">
                   <QuizEngine
                     question={lesson.quiz_question}
                     options={lesson.quiz_options || []}
