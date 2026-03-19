@@ -1,36 +1,68 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import MasteryChart from "@/components/MasteryChart";
 import type { ModuleProgressSummary } from "@/types/api";
+import { createClient } from "@/lib/supabase"; // Import Supabase Client
 
 export default function Home() {
   const [dueCount, setDueCount] = useState<number>(0);
   const [summaryData, setSummaryData] = useState<ModuleProgressSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const router = useRouter();
+  const supabase = createClient();
 
   useEffect(() => {
-    // Fetch Due Count
-    fetch("http://127.0.0.1:8000/api/progress/due")
-      .then((res) => res.json())
-      .then((data) => setDueCount(data.due_count))
-      .catch(console.error);
+    const fetchDashboardData = async () => {
+      // 1. Get the current user session from Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // If the user isn't logged in, send them to the login page
+      if (!session) {
+        router.push("/login");
+        return;
+      }
 
-    // Fetch Mastery Summary
-    fetch("http://127.0.0.1:8000/api/progress/summary")
-      .then((res) => res.json())
-      .then((data) => {
-        setSummaryData(data);
+      // 2. Prepare the Security Headers with the JWT token
+      const headers = {
+        "Authorization": `Bearer ${session.access_token}`,
+        "Content-Type": "application/json"
+      };
+
+      try {
+        // 3. Fetch Due Count (WITH HEADERS)
+        const dueRes = await fetch("http://127.0.0.1:8000/api/progress/due", { headers });
+        if (dueRes.ok) {
+          const dueData = await dueRes.json();
+          setDueCount(dueData.due_count);
+        }
+
+        // 4. Fetch Mastery Summary (WITH HEADERS)
+        const summaryRes = await fetch("http://127.0.0.1:8000/api/progress/summary", { headers });
+        if (summaryRes.ok) {
+          const summaryData = await summaryRes.json();
+          setSummaryData(summaryData);
+        } else {
+          // If the server returns an error, safely default to an empty array
+          setSummaryData([]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
         setLoading(false);
-      })
-      .catch(console.error);
-  }, []);
+      }
+    };
+
+    fetchDashboardData();
+  }, [router, supabase]);
 
   return (
     <div className="flex flex-col items-center min-h-[80vh] py-12">
       <div className="text-center mb-12">
         <h1 className="text-4xl font-black text-blue-900 mb-4 tracking-tight">
-          Welcome to Delta EE
+          Welcome to Spirelay
         </h1>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
           Master complex electrical engineering concepts through spaced repetition and bite-sized micro-lessons.
@@ -72,7 +104,7 @@ export default function Home() {
         <div className="lg:col-span-2 flex flex-col">
           {loading ? (
             <div className="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex items-center justify-center text-gray-400 font-mono animate-pulse">
-              Aggregating Mastery Data...
+              Authenticating & Loading Data...
             </div>
           ) : (
             <MasteryChart data={summaryData} />

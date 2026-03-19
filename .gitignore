@@ -12,5 +12,16 @@ build/
 .env
 .env.*
 
-# OS
+# Ignore environment files in any directory
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Ignore OS specific files
 .DS_Store
+Thumbs.db
+
+#for opensource usage
+!.env.example

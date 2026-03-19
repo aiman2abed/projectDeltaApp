@@ -1,37 +1,73 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import VideoPlayer from "@/components/VideoPlayer";
 import QuizEngine from "@/components/QuizEngine";
 import MathRenderer from "@/components/MathRenderer";
 import type { Lesson, ProgressUpdateRequest } from "@/types/api";
+import { createClient } from "@/lib/supabase"; // Import Supabase Client
 
 export default function DiscoverFeed() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const sectionRefs = useRef<Array<HTMLElement | null>>([]);
+  
+  const router = useRouter();
+  const supabase = createClient();
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/lessons")
-      .then((res) => res.json())
-      .then((data) => {
-        setLessons(data);
+    const fetchSmartFeed = async () => {
+      // 1. Get the current user session from Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // If the user isn't logged in, send them to the login page
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+
+      try {
+        // 2. Attach the JWT token to the headers
+        const res = await fetch("http://127.0.0.1:8000/api/feed/smart", {
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        if (!res.ok) throw new Error("Feed unavailable");
+        
+        const data = await res.json();
+        setLessons(data); // The backend already shuffled and ranked them!
+      } catch (err) {
+        console.error("Error loading smart feed:", err);
+      } finally {
         setLoading(false);
-      })
-      .catch((err) => console.error("Discover Feed Error:", err));
-  }, []);
+      }
+    };
+
+    fetchSmartFeed();
+  }, [router, supabase]);
 
   // Upgraded to handle the DB save AND the scroll
   const handleLessonSuccess = async (lessonIndex: number, lessonId: number, isFirstTry: boolean) => {
+    // We fetch the session dynamically here to ensure the token hasn't expired while they were studying
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
     // 1. Save progress silently in the background
     const payload: ProgressUpdateRequest = {
-      user_id: 1,
+      user_id: 1, // Dummy ID: The backend ignores this and securely uses the UUID from the token
       quality: isFirstTry ? 5 : 3, // Perfect score if first try, lower score if they guessed
     };
 
     try {
       await fetch(`http://127.0.0.1:8000/api/progress/${lessonId}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}` // Attach token for progress saving!
+        },
         body: JSON.stringify(payload),
       });
       console.log(`Successfully synced progress for lesson ${lessonId}`);
@@ -53,7 +89,7 @@ export default function DiscoverFeed() {
   if (loading)
     return (
       <div className="h-screen flex items-center justify-center bg-black text-white font-mono uppercase tracking-[0.2rem]">
-        Initializing Engineering Stream...
+        Authenticating Spirelay Stream...
       </div>
     );
 
@@ -69,14 +105,14 @@ export default function DiscoverFeed() {
         >
           <div className="max-w-md w-full bg-white rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col h-[85vh] border-4 border-gray-900">
             <div className="px-6 py-4 bg-blue-900 text-white flex justify-between items-center border-b border-blue-800">
-              <span className="text-[10px] font-black tracking-widest uppercase italic">Project Delta</span>
-              <span className="text-[10px] bg-blue-700 px-2 py-0.5 rounded-full font-bold">{lesson.id} / 12</span>
+              <span className="text-[10px] font-black tracking-widest uppercase italic">Spirelay</span>
+              <span className="text-[10px] bg-blue-700 px-2 py-0.5 rounded-full font-bold">{index + 1} / {lessons.length}</span>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               <h2 className="text-2xl font-black text-gray-900 leading-tight">{lesson.title}</h2>
 
-              {lesson.video_url && <VideoPlayer url={lesson.video_url} />}
+              {lesson.video_url && <VideoPlayer url={lesson.video_url} mode="feed" />}
 
               <div className="prose prose-sm text-gray-700">
                 <p className="leading-relaxed">{lesson.content_text}</p>
@@ -90,7 +126,6 @@ export default function DiscoverFeed() {
                     question={lesson.quiz_question}
                     options={lesson.quiz_options || []}
                     correctAnswer={lesson.correct_answer || ""}
-                    // We now catch the boolean from QuizEngine and pass the DB variables
                     onSuccess={(isFirstTry) => {
                       handleLessonSuccess(index, lesson.id, isFirstTry);
                     }}

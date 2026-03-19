@@ -1,0 +1,21 @@
+# 🔐 Secrets
+.env
+
+# 🐍 Python Virtual Environment
+venv/
+.venv/
+env/
+
+# 📂 Python Cache & Compiled Files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.vscode/
+
+# 📉 Databases (If you ever used local SQLite)
+*.sqlite3
+*.db
+
+#for opensource usage
+!.env.example
