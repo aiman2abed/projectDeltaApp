@@ -25,3 +25,7 @@ Thumbs.db
 
 #for opensource usage
 !.env.example
+
+#logo
+*.png
+frontend/public/spirelay_logo.svg

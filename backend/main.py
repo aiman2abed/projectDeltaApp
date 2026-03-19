@@ -7,8 +7,6 @@ import random
 import models, schemas
 from database import SessionLocal
 from auth import get_current_user, get_admin_user # Add get_admin_user
-# 1. Import the gatekeeper
-from auth import get_current_user 
 
 app = FastAPI(title="Spirelay")
 

@@ -6,4 +6,3 @@ supabase
 python-dotenv
 pydantic
 pytest
-
