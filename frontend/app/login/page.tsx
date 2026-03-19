@@ -71,8 +71,9 @@ export default function LoginPage() {
             Engineering Learning Engine
           </p>
 
-          <p className="max-w-sm mx-auto text-lg text-slate-800 font-medium leading-8">
-            Master complex engineering systems through algorithmic spaced repetition.
+          <p className="max-w-lg mx-auto text-lg text-slate-800 font-large leading-8">
+            reel after reel, short after short, how many engineering concepts can you "export"?<br></br>
+            Keep learning complex engineering topics in a way that actually sticks.
           </p>
         </div>
       </div>
