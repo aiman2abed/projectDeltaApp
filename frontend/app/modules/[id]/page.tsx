@@ -13,14 +13,11 @@ interface Lesson {
 export default function ModuleIndexPage() {
   const params = useParams();
   const router = useRouter();
-  const moduleId = params.id;
-  
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch only the lessons that belong to this specific module
-    fetch(`http://127.0.0.1:8000/api/modules/${moduleId}/lessons`)
+    fetch(`http://localhost:8000/api/modules/${params.id}/lessons`)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch lessons");
         return res.json();
@@ -33,46 +30,46 @@ export default function ModuleIndexPage() {
         console.error(error);
         setLoading(false);
       });
-  }, [moduleId]);
+  }, [params.id]);
 
-  if (loading) {
-    return <div className="mt-20 text-center font-bold text-xl text-blue-900">Loading curriculum...</div>;
-  }
+  if (loading) return <div className="p-10 text-sky-400 font-mono animate-pulse">DECRYPTING MODULE ARCHIVES...</div>;
 
   return (
-    <div className="max-w-3xl mx-auto py-8">
+    <div className="w-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-4xl mx-auto">
       <button 
         onClick={() => router.push('/modules')}
-        className="mb-6 text-sm font-semibold text-slate-500 hover:text-slate-800 transition flex items-center gap-2"
+        className="text-sky-400 hover:text-sky-300 text-sm font-bold tracking-widest uppercase flex items-center gap-2 w-max transition-colors"
       >
-        ← Back to All Tracks
+        ← Back to Curriculum
       </button>
 
-      <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Module Lessons</h1>
-      <p className="text-slate-600 mb-8">Select a topic below to begin studying.</p>
+      <div>
+        <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2 text-glow">Module Sequences</h1>
+        <p className="text-slate-400">Select a technical payload below to begin your study sequence.</p>
+      </div>
 
       {lessons.length === 0 ? (
-        <div className="bg-slate-50 rounded-2xl p-8 text-center border border-slate-200">
-          <p className="text-slate-500">No lessons have been added to this module yet.</p>
+        <div className="glass-panel p-10 text-center rounded-2xl border-dashed border-white/10">
+          <p className="text-slate-500 font-medium">No payload data found in this module node.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-4">
           {lessons.map((lesson, index) => (
             <Link key={lesson.id} href={`/lessons/${lesson.id}`}>
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md hover:border-cyan-300 transition cursor-pointer group flex items-center justify-between">
+              <div className="glass-panel p-6 rounded-2xl shadow-sm border border-white/5 hover:border-sky-500/50 hover:shadow-[0_0_20px_rgba(56,189,248,0.15)] transition-all cursor-pointer group flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-cyan-600 mb-1">
-                    Lesson {index + 1}
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400 mb-1">
+                    Sequence {index + 1}
                   </p>
-                  <h2 className="text-lg font-bold text-slate-900 group-hover:text-cyan-700 transition">
+                  <h2 className="text-xl font-bold text-white group-hover:text-sky-300 transition">
                     {lesson.title}
                   </h2>
-                  <p className="text-sm text-slate-500 mt-2 line-clamp-2 max-w-xl">
+                  <p className="text-sm text-slate-400 mt-2 line-clamp-2 max-w-xl">
                     {lesson.content_text}
                   </p>
                 </div>
-                <div className="h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center group-hover:bg-cyan-100 transition">
-                  <span className="text-slate-400 group-hover:text-cyan-600">▶</span>
+                <div className="h-12 w-12 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-sky-500/20 group-hover:border-sky-500/50 transition">
+                  <span className="text-sky-400 ml-1">▶</span>
                 </div>
               </div>
             </Link>
