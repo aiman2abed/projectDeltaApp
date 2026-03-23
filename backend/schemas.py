@@ -49,12 +49,6 @@ class LessonBase(BaseModel):
 class LessonCreate(LessonBase):
     pass
 
-class LessonResponse(LessonBase):
-    id: int
-
-    class Config:
-        from_attributes = True
-
 class LessonUpdate(BaseModel):
     title: Optional[str] = None
     content_text: Optional[str] = None
@@ -64,9 +58,25 @@ class LessonUpdate(BaseModel):
     quiz_options: Optional[List[str]] = None # Or Optional[str] depending on how you store it
     correct_answer: Optional[str] = None
 
+# --- LESSON SCHEMAS ---
+class LessonResponse(BaseModel):
+    id: int
+    module_id: int
+    title: str
+    content_text: str
+    content_math: Optional[str] = None
+    video_url: Optional[str] = None # Essential for the Reels
+    quiz_question: Optional[str] = None
+    quiz_options: Optional[List[str]] = None
+    correct_answer: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+# --- PROGRESS SCHEMAS ---
 class ProgressUpdateRequest(BaseModel):
-    user_id: str
-    quality: int = Field(ge=0, le=5)
+    # We remove user_id here because we'll get it from the Auth Token (JWT)
+    quality: int = Field(..., ge=0, le=5) 
 
 class ProgressUpdateResponse(BaseModel):
     status: str
@@ -75,7 +85,6 @@ class ProgressUpdateResponse(BaseModel):
     interval: int
     repetitions: int
     ease_factor: float
-
 # --- USER PROGRESS SCHEMAS ---
 class UserProgressBase(BaseModel):
     user_id: str

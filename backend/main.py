@@ -158,51 +158,60 @@ def delete_lesson(lesson_id: int, db: Session = Depends(get_db)):
 @app.post("/api/progress/{lesson_id}", response_model=schemas.ProgressUpdateResponse)
 def mark_lesson_understood(
     lesson_id: int,
-    progress_payload: schemas.ProgressUpdateRequest,
+    payload: schemas.ProgressUpdateRequest,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user) # Gatekeeper active
+    current_user = Depends(get_current_user)
 ):
-    """Process SRS algorithm updates when a user passes a lesson quiz."""
-    # We now strictly trust the token's UUID over the payload's user_id
     user_id = current_user.id
+    q = payload.quality 
     
+    # 1. Fetch existing record or initialize
     progress = db.query(models.UserProgress).filter(
         models.UserProgress.user_id == user_id,
         models.UserProgress.lesson_id == lesson_id
     ).first()
 
     if not progress:
-        new_progress = models.UserProgress(
+        progress = models.UserProgress(
             user_id=user_id,
             lesson_id=lesson_id,
-            repetitions=1,
-            interval=1,
             ease_factor=2.5,
-            next_review_date=date.today() + timedelta(days=1)
+            repetitions=0,
+            interval=0
         )
-        db.add(new_progress)
-    else:
-        progress.repetitions += 1
-        if progress.repetitions == 2:
+        db.add(progress)
+
+    # 2. Apply SM-2 Interval Calculation
+    if q >= 3:  # Correct response (Hard, Good, Easy)
+        if progress.repetitions == 0:
+            progress.interval = 1
+        elif progress.repetitions == 1:
             progress.interval = 6
         else:
             progress.interval = round(progress.interval * progress.ease_factor)
-        progress.next_review_date = date.today() + timedelta(days=progress.interval)
+        
+        progress.repetitions += 1
+    else:  # Incorrect response (Again)
+        progress.repetitions = 0
+        progress.interval = 1
 
+    # 3. Calculate New Ease Factor
+    # Formula: EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
+    new_ef = progress.ease_factor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
+    progress.ease_factor = max(1.3, new_ef) # Never drop below 1.3
+
+    progress.next_review_date = date.today() + timedelta(days=progress.interval)
+    
     db.commit()
-
-    updated_progress = db.query(models.UserProgress).filter(
-        models.UserProgress.user_id == user_id,
-        models.UserProgress.lesson_id == lesson_id
-    ).first()
+    db.refresh(progress)
 
     return {
         "status": "success",
-        "message": "Progress recorded and next review scheduled.",
-        "next_review_date": updated_progress.next_review_date,
-        "interval": updated_progress.interval,
-        "repetitions": updated_progress.repetitions,
-        "ease_factor": updated_progress.ease_factor,
+        "message": f"SM-2 Calibrated. Review in {progress.interval} days.",
+        "next_review_date": progress.next_review_date,
+        "interval": progress.interval,
+        "repetitions": progress.repetitions,
+        "ease_factor": progress.ease_factor
     }
 
 @app.get("/api/progress/due")

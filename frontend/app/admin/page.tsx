@@ -1,602 +1,142 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase"; // Note: Adjusted to match your src folder structure
+import { useState } from "react";
 
-interface Module {
-  id: number;
-  title: string;
-  description: string;
-}
+// Mock Database for the Admin View
+const mockModulesDB = [
+  { id: "mod_01", title: "Power Electronics: Rectifiers", status: "Published", cards: 142, lastUpdated: "2026-03-22" },
+  { id: "mod_02", title: "VLSI: CMOS Layouts", status: "Published", cards: 89, lastUpdated: "2026-03-20" },
+  { id: "mod_03", title: "Embedded: MIPS Architecture", status: "Draft", cards: 45, lastUpdated: "2026-03-23" },
+  { id: "mod_04", title: "Control Theory: PID Tuning", status: "Published", cards: 112, lastUpdated: "2026-03-15" },
+];
 
-interface Lesson {
-  id: number;
-  module_id: number;
-  title: string;
-  content_text: string;
-  content_math: string | null;
-  video_url: string | null;
-  quiz_question: string | null;
-  quiz_options: string[] | null;
-  correct_answer: string | null;
-}
+const mockUsersDB = [
+  { id: "usr_001", name: "Aiman Abed", role: "Super Admin", status: "Active", lastLogin: "Just now" },
+  { id: "usr_002", name: "Mohamad", role: "Admin", status: "Active", lastLogin: "2 hours ago" },
+  { id: "usr_003", name: "Guest Student", role: "User", status: "Inactive", lastLogin: "4 days ago" },
+];
 
-interface ModuleFormState {
-  title: string;
-  description: string;
-}
-
-interface LessonFormState {
-  module_id: string;
-  title: string;
-  content_text: string;
-  content_math: string;
-  video_url: string;
-  quiz_question: string;
-  quiz_options: string;
-  correct_answer: string;
-}
-
-interface UserRecord {
-  id: string;
-  email: string;
-  role: string;
-}
-
-const API_BASE_URL = "http://127.0.0.1:8000";
-
-const initialModuleForm: ModuleFormState = { title: "", description: "" };
-const initialLessonForm: LessonFormState = {
-  module_id: "", title: "", content_text: "", content_math: "",
-  video_url: "", quiz_question: "", quiz_options: "", correct_answer: "",
-};
-
-export default function AdminStudioPage() {
-  const router = useRouter();
-  const supabase = createClient();
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
-
-  // --- USER CONTROL STATE ---
-  const [users, setUsers] = useState<UserRecord[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-
-  // --- CORE STATE ---
-  const [activeTab, setActiveTab] = useState<"create" | "manage" | "users">("create");
-  const [modules, setModules] = useState<Module[]>([]);
-  const [loadingModules, setLoadingModules] = useState(true);
-
-  // --- FORM STATE ---
-  const [moduleForm, setModuleForm] = useState<ModuleFormState>(initialModuleForm);
-  const [lessonForm, setLessonForm] = useState<LessonFormState>(initialLessonForm);
-  
-  // --- EDIT MODE STATE ---
-  const [editingModuleId, setEditingModuleId] = useState<number | null>(null);
-  const [editingLessonId, setEditingLessonId] = useState<number | null>(null);
-
-  // --- MANAGE VIEW STATE ---
-  const [selectedManageModuleId, setSelectedManageModuleId] = useState<number | null>(null);
-  const [manageLessons, setManageLessons] = useState<Lesson[]>([]);
-
-  // --- SUBMISSION UI STATE ---
-  const [moduleSubmitting, setModuleSubmitting] = useState(false);
-  const [lessonSubmitting, setLessonSubmitting] = useState(false);
-  const [moduleStatus, setModuleStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [lessonStatus, setLessonStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
-
-
-  // ==========================================
-  // AUTHORIZATION GATEKEEPER
-  // ==========================================
-  useEffect(() => {
-    const verifyAdmin = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        router.push("/login");
-        return;
-      }
-
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/users/me`, {
-          headers: { "Authorization": `Bearer ${session.access_token}` }
-        });
-
-        const data = await res.json();
-
-        if (data.role !== "admin") {
-          router.push("/"); // Kick them out
-        } else {
-          setSessionToken(session.access_token);
-          setIsAuthorized(true);
-        }
-      } catch (err) {
-        console.error("Auth verification failed", err);
-        router.push("/");
-      }
-    };
-
-    verifyAdmin();
-  }, [router, supabase]);
-
-  // ==========================================
-  // DATA FETCHING (Requires sessionToken)
-  // ==========================================
-  const fetchModules = useCallback(async () => {
-    if (!sessionToken) return;
-    setLoadingModules(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/modules`, {
-        headers: { "Authorization": `Bearer ${sessionToken}` }
-      });
-      if (response.ok) {
-        const data: Module[] = await response.json();
-        setModules(data);
-      }
-    } catch (error) {
-      console.error("Error fetching modules:", error);
-    } finally {
-      setLoadingModules(false);
-    }
-  }, [sessionToken]);
-
-  useEffect(() => {
-    if (isAuthorized) {
-      void fetchModules();
-    }
-  }, [isAuthorized, fetchModules]);
-
-  const fetchManageLessons = async (moduleId: number) => {
-    if (!sessionToken) return;
-    setSelectedManageModuleId(moduleId);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/modules/${moduleId}/lessons`, {
-        headers: { "Authorization": `Bearer ${sessionToken}` }
-      });
-      if (res.ok) {
-        setManageLessons(await res.json());
-      }
-    } catch (error) {
-      console.error("Failed to fetch lessons for management.", error);
-    }
-  };
-
-  const lessonOptionsPreview = useMemo(
-    () => lessonForm.quiz_options.split(",").map((option) => option.trim()).filter(Boolean),
-    [lessonForm.quiz_options]
-  );
-
-  // --- USER FETCHING & MANAGEMENT ---
-  const fetchUsers = useCallback(async () => {
-    if (!sessionToken) return;
-    setLoadingUsers(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/users`, {
-        headers: { "Authorization": `Bearer ${sessionToken}` }
-      });
-      if (res.ok) setUsers(await res.json());
-    } catch (error) {
-      console.error("Failed to fetch users", error);
-    } finally {
-      setLoadingUsers(false);
-    }
-  }, [sessionToken]);
-
-  useEffect(() => {
-    if (activeTab === "users") fetchUsers();
-  }, [activeTab, fetchUsers]);
-
-  const handleToggleRole = async (user: UserRecord) => {
-    if (!sessionToken) return;
-    const newRole = user.role === "admin" ? "user" : "admin";
-    if (!window.confirm(`Change ${user.email} to ${newRole}?`)) return;
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/users/${user.id}/role`, {
-        method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${sessionToken}` 
-        },
-        body: JSON.stringify({ role: newRole }),
-      });
-
-      if (res.ok) fetchUsers(); // Refresh list
-    } catch (error) {
-      alert("Failed to update role.");
-    }
-  };
-
-  // ==========================================
-  // MODULE CRUD HANDLERS
-  // ==========================================
-
-  const handleModuleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!sessionToken) return;
-    
-    setModuleSubmitting(true);
-    setModuleStatus(null);
-
-    const isEditing = editingModuleId !== null;
-    const url = isEditing ? `${API_BASE_URL}/api/modules/${editingModuleId}` : `${API_BASE_URL}/api/modules`;
-    const method = isEditing ? "PUT" : "POST";
-
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${sessionToken}`
-        },
-        body: JSON.stringify(moduleForm),
-      });
-
-      if (!response.ok) throw new Error("Module save failed.");
-
-      setModuleStatus({ type: "success", message: `Module ${isEditing ? "updated" : "created"} successfully!` });
-      setModuleForm(initialModuleForm);
-      setEditingModuleId(null);
-      fetchModules(); // Refresh list
-    } catch (error) {
-      setModuleStatus({ type: "error", message: "Error saving module. Try again." });
-    } finally {
-      setModuleSubmitting(false);
-    }
-  };
-
-  const handleDeleteModule = async (id: number) => {
-    if (!sessionToken) return;
-    if (!window.confirm("WARNING: This will delete the module AND all lessons inside it. Are you sure?")) return;
-    
-    try {
-      await fetch(`${API_BASE_URL}/api/modules/${id}`, { 
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${sessionToken}` }
-      });
-      fetchModules();
-      if (selectedManageModuleId === id) setSelectedManageModuleId(null);
-    } catch (error) {
-      alert("Failed to delete module.");
-    }
-  };
-
-  const handleEditModuleClick = (mod: Module) => {
-    setModuleForm({ title: mod.title, description: mod.description });
-    setEditingModuleId(mod.id);
-    setActiveTab("create");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  // ==========================================
-  // LESSON CRUD HANDLERS
-  // ==========================================
-
-  const handleLessonSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!sessionToken) return;
-
-    setLessonSubmitting(true);
-    setLessonStatus(null);
-
-    const isEditing = editingLessonId !== null;
-    const url = isEditing ? `${API_BASE_URL}/api/lessons/${editingLessonId}` : `${API_BASE_URL}/api/lessons`;
-    const method = isEditing ? "PUT" : "POST";
-
-    try {
-      const payload = {
-        module_id: Number(lessonForm.module_id),
-        title: lessonForm.title,
-        content_text: lessonForm.content_text,
-        content_math: lessonForm.content_math || null,
-        video_url: lessonForm.video_url || null,
-        quiz_question: lessonForm.quiz_question || null,
-        quiz_options: lessonOptionsPreview.length > 0 ? lessonOptionsPreview : null,
-        correct_answer: lessonForm.correct_answer || null,
-      };
-
-      const response = await fetch(url, {
-        method,
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${sessionToken}`
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) throw new Error("Lesson save failed.");
-
-      setLessonStatus({ type: "success", message: `Lesson ${isEditing ? "updated" : "created"} successfully!` });
-      setLessonForm({ ...initialLessonForm, module_id: lessonForm.module_id }); 
-      setEditingLessonId(null);
-    } catch (error) {
-      setLessonStatus({ type: "error", message: "Error saving lesson. Try again." });
-    } finally {
-      setLessonSubmitting(false);
-    }
-  };
-
-  const handleDeleteLesson = async (lessonId: number, moduleId: number) => {
-    if (!sessionToken) return;
-    if (!window.confirm("Delete this lesson permanently?")) return;
-    
-    try {
-      await fetch(`${API_BASE_URL}/api/lessons/${lessonId}`, { 
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${sessionToken}` }
-      });
-      fetchManageLessons(moduleId);
-    } catch (error) {
-      alert("Failed to delete lesson.");
-    }
-  };
-
-  const handleEditLessonClick = (les: Lesson) => {
-    setLessonForm({
-      module_id: les.module_id.toString(),
-      title: les.title,
-      content_text: les.content_text,
-      content_math: les.content_math || "",
-      video_url: les.video_url || "",
-      quiz_question: les.quiz_question || "",
-      quiz_options: les.quiz_options ? les.quiz_options.join(", ") : "",
-      correct_answer: les.correct_answer || "",
-    });
-    setEditingLessonId(les.id);
-    setActiveTab("create");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const cancelEdit = () => {
-    setEditingModuleId(null);
-    setEditingLessonId(null);
-    setModuleForm(initialModuleForm);
-    setLessonForm(initialLessonForm);
-  };
-
-  if (!isAuthorized) return <div className="h-screen flex items-center justify-center font-mono text-blue-900 font-bold tracking-widest uppercase">Verifying Clearances...</div>;
+export default function AdminPage() {
+  const [activeTab, setActiveTab] = useState<"modules" | "users">("modules");
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-      {/* SIDEBAR */}
-      <aside className="rounded-3xl border border-slate-200 bg-slate-900 p-6 text-white shadow-xl flex flex-col h-max">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300">Content Studio</p>
-        <h1 className="mt-4 text-3xl font-semibold">Admin</h1>
+    <div className="w-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      
+      {/* Header & Global Actions */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <p className="text-sm font-bold tracking-[0.2em] text-red-400 uppercase mb-1 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            Super-User Access
+          </p>
+          <h1 className="text-4xl font-extrabold text-white tracking-tight">
+            Database Terminal
+          </h1>
+        </div>
+        <div className="flex gap-3">
+          <button className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-300 bg-slate-800 border border-white/10 hover:bg-slate-700 transition-colors">
+            Export Logs
+          </button>
+          <button className="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-all hover:-translate-y-0.5">
+            + Inject Payload
+          </button>
+        </div>
+      </div>
+
+      {/* High-Level System Telemetry */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="glass-panel p-5 rounded-2xl border-t-2 border-t-sky-400 flex flex-col gap-1">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">System Status</span>
+          <span className="text-xl font-bold text-emerald-400">Operational</span>
+        </div>
+        <div className="glass-panel p-5 rounded-2xl flex flex-col gap-1">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total Tenants</span>
+          <span className="text-xl font-bold text-white">{mockUsersDB.length}</span>
+        </div>
+        <div className="glass-panel p-5 rounded-2xl flex flex-col gap-1">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Active Modules</span>
+          <span className="text-xl font-bold text-white">{mockModulesDB.length}</span>
+        </div>
+        <div className="glass-panel p-5 rounded-2xl flex flex-col gap-1">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Database Ping</span>
+          <span className="text-xl font-bold text-white">24ms</span>
+        </div>
+      </div>
+
+      {/* Main Terminal Area */}
+      <div className="glass-panel rounded-3xl flex flex-col overflow-hidden border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
         
-        <div className="mt-8 flex flex-col gap-2">
+        {/* Terminal Tabs */}
+        <div className="flex border-b border-white/5 bg-slate-900/50">
           <button 
-            onClick={() => setActiveTab("create")}
-            className={`px-4 py-3 rounded-xl text-left font-medium transition ${activeTab === "create" ? "bg-cyan-600 text-white" : "hover:bg-white/10 text-slate-300"}`}
+            onClick={() => setActiveTab("modules")}
+            className={`px-8 py-4 text-sm font-bold uppercase tracking-wider transition-all duration-300 ${activeTab === "modules" ? "text-sky-400 border-b-2 border-sky-400 bg-white/5" : "text-slate-500 hover:text-slate-300 hover:bg-white/5"}`}
           >
-            ✏️ Author Content
+            Curriculum Modules
           </button>
           <button 
-            onClick={() => { setActiveTab("manage"); cancelEdit(); }}
-            className={`px-4 py-3 rounded-xl text-left font-medium transition ${activeTab === "manage" ? "bg-cyan-600 text-white" : "hover:bg-white/10 text-slate-300"}`}
+            onClick={() => setActiveTab("users")}
+            className={`px-8 py-4 text-sm font-bold uppercase tracking-wider transition-all duration-300 ${activeTab === "users" ? "text-sky-400 border-b-2 border-sky-400 bg-white/5" : "text-slate-500 hover:text-slate-300 hover:bg-white/5"}`}
           >
-            🗂️ Manage Catalog
-          </button>
-          <button 
-            onClick={() => { setActiveTab("users"); cancelEdit(); }}
-            className={`px-4 py-3 rounded-xl text-left font-medium transition ${activeTab === "users" ? "bg-cyan-600 text-white" : "hover:bg-white/10 text-slate-300"}`}
-          >
-            👥 Manage Users
+            Tenant Management
           </button>
         </div>
 
-        <div className="mt-auto pt-8">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Total Modules</p>
-          <p className="mt-1 text-4xl font-semibold">{loadingModules ? "…" : modules.length}</p>
-        </div>
-      </aside>
-
-      {/* MAIN CONTENT AREA */}
-      <section className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm min-h-[70vh]">
-        
-        {/* ==========================================
-            TAB 1: CREATE / EDIT FORMS
-            ========================================== */}
-        {activeTab === "create" && (
-          <div className="grid gap-12 xl:grid-cols-2">
-            
-            {/* MODULE FORM */}
-            <form onSubmit={handleModuleSubmit} className="space-y-6">
-              <div className="border-b pb-4">
-                <h2 className="text-2xl font-semibold text-slate-900">
-                  {editingModuleId ? "Update Module" : "Create New Module"}
-                </h2>
-                {editingModuleId && (
-                  <button type="button" onClick={cancelEdit} className="text-sm text-rose-500 hover:underline mt-1">
-                    Cancel Edit Mode
-                  </button>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700">Title</span>
-                  <input required value={moduleForm.title} onChange={(e) => setModuleForm({ ...moduleForm, title: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Signals & Systems" />
-                </label>
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700">Description</span>
-                  <textarea required value={moduleForm.description} onChange={(e) => setModuleForm({ ...moduleForm, description: e.target.value })} className="min-h-36 w-full rounded-2xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-cyan-200 outline-none" />
-                </label>
-              </div>
-
-              {moduleStatus && <p className={`rounded-2xl px-4 py-3 text-sm ${moduleStatus.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{moduleStatus.message}</p>}
-
-              <button type="submit" disabled={moduleSubmitting} className={`w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white transition ${editingModuleId ? "bg-amber-500 hover:bg-amber-600" : "bg-slate-900 hover:bg-slate-800"}`}>
-                {moduleSubmitting ? "Saving..." : editingModuleId ? "Save Changes" : "Create Module"}
-              </button>
-            </form>
-
-            {/* LESSON FORM */}
-            <form onSubmit={handleLessonSubmit} className="space-y-6">
-              <div className="border-b pb-4">
-                <h2 className="text-2xl font-semibold text-slate-900">
-                  {editingLessonId ? "Update Lesson" : "Create New Lesson"}
-                </h2>
-                {editingLessonId && (
-                  <button type="button" onClick={cancelEdit} className="text-sm text-rose-500 hover:underline mt-1">
-                    Cancel Edit Mode
-                  </button>
-                )}
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block md:col-span-2">
-                  <span className="mb-2 block text-sm font-medium text-slate-700">Target Module</span>
-                  <select required value={lessonForm.module_id} onChange={(e) => setLessonForm({ ...lessonForm, module_id: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-200">
-                    <option value="">Select a module...</option>
-                    {modules.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
-                  </select>
-                </label>
-
-                <label className="block md:col-span-2">
-                  <span className="mb-2 block text-sm font-medium text-slate-700">Lesson Title</span>
-                  <input required value={lessonForm.title} onChange={(e) => setLessonForm({ ...lessonForm, title: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-200" />
-                </label>
-
-                <label className="block md:col-span-2">
-                  <span className="mb-2 block text-sm font-medium text-slate-700">Content Text</span>
-                  <textarea required value={lessonForm.content_text} onChange={(e) => setLessonForm({ ...lessonForm, content_text: e.target.value })} className="min-h-32 w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-200" />
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700">Content Math (LaTeX)</span>
-                  <input value={lessonForm.content_math} onChange={(e) => setLessonForm({ ...lessonForm, content_math: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-200" />
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700">Video URL</span>
-                  <input value={lessonForm.video_url} onChange={(e) => setLessonForm({ ...lessonForm, video_url: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-200" />
-                </label>
-
-                <label className="block md:col-span-2">
-                  <span className="mb-2 block text-sm font-medium text-slate-700">Quiz Question</span>
-                  <input value={lessonForm.quiz_question} onChange={(e) => setLessonForm({ ...lessonForm, quiz_question: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-200" />
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700">Quiz Options (comma sep)</span>
-                  <input value={lessonForm.quiz_options} onChange={(e) => setLessonForm({ ...lessonForm, quiz_options: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-200" />
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700">Correct Answer</span>
-                  <input value={lessonForm.correct_answer} onChange={(e) => setLessonForm({ ...lessonForm, correct_answer: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-cyan-200" />
-                </label>
-              </div>
-
-              {lessonStatus && <p className={`rounded-2xl px-4 py-3 text-sm ${lessonStatus.type === "success" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{lessonStatus.message}</p>}
-
-              <button type="submit" disabled={lessonSubmitting || modules.length === 0} className={`w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white transition ${editingLessonId ? "bg-amber-500 hover:bg-amber-600" : "bg-cyan-600 hover:bg-cyan-500"}`}>
-                {lessonSubmitting ? "Saving..." : editingLessonId ? "Save Changes" : "Create Lesson"}
-              </button>
-            </form>
-          </div>
-        )}
-
-        {/* ==========================================
-            TAB 2: MANAGE CATALOG
-            ========================================== */}
-        {activeTab === "manage" && (
-          <div>
-            <h2 className="text-2xl font-semibold text-slate-900 border-b pb-4 mb-6">Manage Catalog</h2>
-            
-            <div className="space-y-4">
-              {modules.map((mod) => (
-                <div key={mod.id} className="border border-slate-200 rounded-2xl overflow-hidden">
-                  
-                  {/* Module Header Row */}
-                  <div className="bg-slate-50 p-4 flex items-center justify-between">
-                    <div>
-                      <h3 className="font-bold text-slate-900">{mod.title}</h3>
-                      <p className="text-sm text-slate-500 truncate max-w-md">{mod.description}</p>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <button onClick={() => selectedManageModuleId === mod.id ? setSelectedManageModuleId(null) : fetchManageLessons(mod.id)} className="px-3 py-1.5 text-sm bg-white border border-slate-300 rounded-lg hover:bg-slate-100 font-medium">
-                        {selectedManageModuleId === mod.id ? "Hide Lessons" : "View Lessons"}
-                      </button>
-                      <button onClick={() => handleEditModuleClick(mod)} className="px-3 py-1.5 text-sm bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 font-medium">Edit</button>
-                      <button onClick={() => handleDeleteModule(mod.id)} className="px-3 py-1.5 text-sm bg-rose-100 text-rose-700 rounded-lg hover:bg-rose-200 font-medium">Delete</button>
-                    </div>
-                  </div>
-
-                  {/* Expanded Lessons Area */}
-                  {selectedManageModuleId === mod.id && (
-                    <div className="p-4 bg-white border-t border-slate-200">
-                      {manageLessons.length === 0 ? (
-                        <p className="text-sm text-slate-500 italic">No lessons in this module.</p>
-                      ) : (
-                        <ul className="space-y-2">
-                          {manageLessons.map((lesson) => (
-                            <li key={lesson.id} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
-                              <span className="text-sm font-medium text-slate-700">{lesson.title}</span>
-                              <div className="flex gap-2">
-                                <button onClick={() => handleEditLessonClick(lesson)} className="text-xs font-semibold text-amber-600 hover:underline">Edit</button>
-                                <span className="text-slate-300">|</span>
-                                <button onClick={() => handleDeleteLesson(lesson.id, mod.id)} className="text-xs font-semibold text-rose-600 hover:underline">Delete</button>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-                </div>
+        {/* Data Table */}
+        <div className="p-0 overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-white/5 bg-slate-800/30 text-xs uppercase tracking-widest text-slate-500">
+                <th className="p-4 font-bold">ID</th>
+                <th className="p-4 font-bold">{activeTab === "modules" ? "Module Title" : "Operator Name"}</th>
+                <th className="p-4 font-bold">{activeTab === "modules" ? "Cards" : "Role"}</th>
+                <th className="p-4 font-bold">Status</th>
+                <th className="p-4 font-bold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5 text-sm">
+              
+              {/* Modules View */}
+              {activeTab === "modules" && mockModulesDB.map((mod) => (
+                <tr key={mod.id} className="hover:bg-white/5 transition-colors group">
+                  <td className="p-4 text-slate-500 font-mono">{mod.id}</td>
+                  <td className="p-4 text-white font-medium group-hover:text-sky-300 transition-colors">{mod.title}</td>
+                  <td className="p-4 text-slate-400">{mod.cards}</td>
+                  <td className="p-4">
+                    <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full border ${mod.status === 'Published' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-amber-400 bg-amber-500/10 border-amber-500/20'}`}>
+                      {mod.status}
+                    </span>
+                  </td>
+                  <td className="p-4 flex justify-end gap-2">
+                    <button className="p-2 text-slate-400 hover:text-sky-400 transition-colors rounded-lg hover:bg-sky-500/10">Edit</button>
+                    <button className="p-2 text-slate-400 hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/10">Del</button>
+                  </td>
+                </tr>
               ))}
-            </div>
-          </div>
-        )}
 
-        {/* ==========================================
-            TAB 3: MANAGE USERS
-            ========================================== */}
-        {activeTab === "users" && (
-          <div>
-            <h2 className="text-2xl font-semibold text-slate-900 border-b pb-4 mb-6">User Management</h2>
-            
-            {loadingUsers ? (
-              <div className="text-slate-500 animate-pulse py-4">Loading users...</div>
-            ) : (
-              <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
-                <table className="w-full text-left border-collapse bg-white">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">Email Address</th>
-                      <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">System Role</th>
-                      <th className="py-4 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {users.map((user) => (
-                      <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-4 px-6 font-medium text-slate-700">{user.email}</td>
-                        <td className="py-4 px-6">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${user.role === 'admin' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
-                            {user.role}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6 text-right">
-                          <button 
-                            onClick={() => handleToggleRole(user)}
-                            className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors underline-offset-2 hover:underline bg-blue-50 px-3 py-1.5 rounded-lg"
-                          >
-                            Make {user.role === 'admin' ? 'User' : 'Admin'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </section>
+              {/* Users View */}
+              {activeTab === "users" && mockUsersDB.map((user) => (
+                <tr key={user.id} className="hover:bg-white/5 transition-colors group">
+                  <td className="p-4 text-slate-500 font-mono">{user.id}</td>
+                  <td className="p-4 text-white font-medium group-hover:text-sky-300 transition-colors">{user.name}</td>
+                  <td className="p-4 text-slate-400">{user.role}</td>
+                  <td className="p-4">
+                    <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full border ${user.status === 'Active' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' : 'text-slate-400 bg-slate-500/10 border-slate-500/20'}`}>
+                      {user.status}
+                    </span>
+                  </td>
+                  <td className="p-4 flex justify-end gap-2">
+                    <button className="p-2 text-slate-400 hover:text-sky-400 transition-colors rounded-lg hover:bg-sky-500/10">Manage</button>
+                    <button className="p-2 text-slate-400 hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/10">Ban</button>
+                  </td>
+                </tr>
+              ))}
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   );
 }

@@ -1,131 +1,164 @@
 "use client";
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import MasteryChart from "@/components/MasteryChart";
-import type { ModuleProgressSummary } from "@/types/api";
-import { createClient } from "@/lib/supabase"; 
 
-export default function Home() {
-  const [dueCount, setDueCount] = useState<number>(0);
-  const [summaryData, setSummaryData] = useState<ModuleProgressSummary[]>([]);
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase";
+
+export default function Dashboard() {
+  const [stats, setStats] = useState<any[]>([]);
+  const [dueCount, setDueCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState<string>("Engineer");
-  
-  const router = useRouter();
-  const supabase = createClient();
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchTelemetry = async () => {
+      const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        router.push("/login");
-        return;
-      }
+      if (!session) return;
 
-      // Extract the first part of the email to use as a generic name
-      const emailName = session.user.email?.split("@")[0] || "Engineer";
-      setUserName(emailName.charAt(0).toUpperCase() + emailName.slice(1));
-
-      const headers = {
-        "Authorization": `Bearer ${session.access_token}`,
-        "Content-Type": "application/json"
-      };
+      const headers = { Authorization: `Bearer ${session.access_token}` };
 
       try {
-        const dueRes = await fetch("http://127.0.0.1:8000/api/progress/due", { headers });
-        if (dueRes.ok) {
-          const dueData = await dueRes.json();
-          setDueCount(dueData.due_count);
-        }
+        const [statsRes, dueRes] = await Promise.all([
+          fetch("http://localhost:8000/api/progress/summary", { headers }),
+          fetch("http://localhost:8000/api/progress/due", { headers })
+        ]);
 
-        const summaryRes = await fetch("http://127.0.0.1:8000/api/progress/summary", { headers });
-        if (summaryRes.ok) {
-          const summaryData = await summaryRes.json();
-          setSummaryData(summaryData);
-        } else {
-          setSummaryData([]);
-        }
-      } catch (error) {
-        console.error("Failed to fetch dashboard data:", error);
+        const statsData = await statsRes.json();
+        const dueData = await dueRes.json();
+
+        setStats(statsData);
+        setDueCount(dueData.due_count);
+      } catch (err) {
+        console.error("Telemetry Sync Failed:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDashboardData();
-  }, [router, supabase]);
+    fetchTelemetry();
+  }, []);
+
+  // Find the module with the most progress to show in the "Priority" card
+  const priorityModule = stats.length > 0 
+    ? stats.reduce((prev, current) => (prev.mastery_score > current.mastery_score) ? prev : current)
+    : null;
+
+  // Calculate average retention
+  const avgRetention = stats.length > 0 
+    ? Math.round(stats.reduce((acc, curr) => acc + curr.mastery_score, 0) / stats.length) 
+    : 0;
+
+  if (loading) {
+    return <div className="w-full h-96 flex items-center justify-center text-sky-400 font-mono animate-pulse">
+      INITIALIZING SYSTEM TELEMETRY...
+    </div>;
+  }
 
   return (
-    <div className="flex flex-col items-center min-h-[80vh] py-12">
+    <div className="w-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
-      {/* Refined Hero Section */}
-      <div className="text-center mb-14 w-full max-w-3xl px-4">
-        <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4 tracking-tight">
-          Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">{userName}</span>
-        </h1>
-        <p className="text-lg text-slate-500 font-medium">
-          Your personalized spaced repetition algorithm is ready.
-        </p>
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-bold tracking-[0.2em] text-sky-400 uppercase mb-1">
+            Command Center
+          </p>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight">
+            Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-600 text-glow">Engineer</span>
+          </h1>
+        </div>
+        <Link 
+          href="/review"
+          className="px-6 py-3 rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 transition-all hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2"
+        >
+          <span>Start Review Session</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+        </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-6xl">
-        
-        {/* Left Column: Actions */}
-        <div className="space-y-6 lg:col-span-1">
-          
-          {/* Premium Spaced Repetition Card */}
-          <div className="bg-white p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden">
-            {/* Subtle background decoration */}
-            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-blue-50 rounded-full opacity-50 blur-2xl"></div>
-            
-            <h2 className="text-xl font-bold text-slate-800 mb-1 relative z-10">Daily Review</h2>
-            
-            {loading ? (
-              <div className="h-20 flex items-center text-slate-400 animate-pulse">Calculating due cards...</div>
-            ) : dueCount > 0 ? (
-              <div className="relative z-10">
-                <p className="text-slate-500 mb-6">
-                  You have <span className="font-extrabold text-blue-600 text-2xl mx-1">{dueCount}</span> items pending retention.
-                </p>
-                <Link href="/review" className="flex items-center justify-center w-full px-4 py-4 rounded-xl font-bold transition-all duration-300 bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-95">
-                  Start Session 🚀
-                </Link>
-              </div>
-            ) : (
-              /* Beautiful Empty State */
-              <div className="flex flex-col items-center justify-center p-6 mt-4 bg-emerald-50 rounded-2xl border border-emerald-100/50 relative z-10">
-                <span className="text-3xl mb-2">✨</span>
-                <h3 className="text-emerald-800 font-bold text-lg">All Caught Up!</h3>
-                <p className="text-emerald-600/80 text-sm text-center mt-1 font-medium">Your memory is fully optimized for today.</p>
-              </div>
-            )}
+      {/* Top Level Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Memory Retention (Live) */}
+        <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2 hover:border-sky-500/30 transition-colors group">
+          <div className="flex items-center gap-3 text-slate-400 group-hover:text-sky-400 transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            <span className="text-sm font-bold uppercase tracking-wider">Memory Retention</span>
           </div>
-
-          {/* Explore Card */}
-          <div className="bg-white p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
-            <h2 className="text-xl font-bold text-slate-800 mb-2">Explore Tracks</h2>
-            <p className="text-slate-500 mb-6 text-sm font-medium">Expand your neural pathways into new subjects.</p>
-            <Link href="/modules" className="flex items-center justify-center w-full bg-slate-50 text-blue-700 px-4 py-4 rounded-xl border border-blue-100 font-bold hover:bg-blue-50 hover:border-blue-200 transition-colors duration-200">
-              Browse Curriculum
-            </Link>
+          <div className="flex items-end gap-2">
+            <span className="text-4xl font-black text-white">{avgRetention}</span>
+            <span className="text-xl font-bold text-slate-500 mb-1">%</span>
           </div>
         </div>
 
-        {/* Right Column: Mastery Visualization */}
-        <div className="lg:col-span-2 flex flex-col h-full">
-          {loading ? (
-            <div className="flex-1 bg-white p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col items-center justify-center text-slate-400 min-h-[400px]">
-              <div className="w-10 h-10 border-4 border-slate-200 border-t-slate-400 rounded-full animate-spin mb-4"></div>
-              <span className="font-mono text-sm tracking-widest uppercase">Rendering Data</span>
+        {/* Modules Count (Live) */}
+        <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2 hover:border-sky-500/30 transition-colors group">
+          <div className="flex items-center gap-3 text-slate-400 group-hover:text-amber-400 transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /></svg>
+            <span className="text-sm font-bold uppercase tracking-wider">Modules Active</span>
+          </div>
+          <div className="flex items-end gap-2">
+            <span className="text-4xl font-black text-white">{stats.length}</span>
+            <span className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wide">Topics</span>
+          </div>
+        </div>
+
+        {/* Pending Reviews (Live) */}
+        <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2 hover:border-sky-500/30 transition-colors group">
+          <div className="flex items-center gap-3 text-slate-400 group-hover:text-red-400 transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span className="text-sm font-bold uppercase tracking-wider">Pending Reviews</span>
+          </div>
+          <div className="flex items-end gap-2">
+            <span className="text-4xl font-black text-white">{dueCount}</span>
+            <span className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wide">Cards</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4">
+        
+        {/* Main Action Area (Priority Module) */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <h2 className="text-xl font-bold text-slate-200 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+            Priority Module
+          </h2>
+          
+          <div className="glass-panel-active p-8 rounded-3xl relative overflow-hidden group cursor-pointer">
+            <div className="absolute right-0 top-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-sky-400/20 transition-colors duration-500" />
+            
+            <div className="relative z-10 flex flex-col gap-4">
+              <span className="px-3 py-1 text-xs font-bold uppercase tracking-widest text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-full w-max">
+                {priorityModule?.module_title || "Initializing..."}
+              </span>
+              <h3 className="text-3xl font-extrabold text-white">
+                {priorityModule ? `Mastery Level: ${priorityModule.mastery_score}%` : "Database Syncing..."}
+              </h3>
+              <p className="text-slate-400 max-w-md leading-relaxed">
+                {priorityModule 
+                  ? `Your memory decay curve suggests focusing on ${priorityModule.module_title} today to maintain your current retention rate.` 
+                  : "Scanning your neural decay patterns to determine the optimal study path..."}
+              </p>
+              
+              <div className="mt-4 flex items-center gap-4">
+                <div className="w-full bg-slate-800/50 rounded-full h-2 max-w-xs border border-white/5">
+                  <div 
+                    className="bg-gradient-to-r from-blue-500 to-sky-400 h-2 rounded-full transition-all duration-1000" 
+                    style={{ width: `${priorityModule?.mastery_score || 0}%` }}
+                  />
+                </div>
+                <span className="text-sm font-bold text-slate-400">{priorityModule?.mastery_score || 0}% Mastered</span>
+              </div>
             </div>
-          ) : (
-            <div className="flex-1 bg-white p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 h-full">
-              <h2 className="text-xl font-bold text-slate-800 mb-6">Mastery Overview</h2>
-              <MasteryChart data={summaryData} />
-            </div>
-          )}
+          </div>
+        </div>
+
+        {/* Sidebar (Right) */}
+        <div className="flex flex-col gap-6">
+          <h2 className="text-xl font-bold text-slate-200">System Activity</h2>
+          <div className="glass-panel p-6 rounded-3xl flex flex-col gap-6 h-full items-center justify-center text-center text-slate-500 italic text-sm">
+            <p>Recent activity logging is currently syncing with the database terminal.</p>
+          </div>
         </div>
 
       </div>

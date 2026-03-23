@@ -1,14 +1,61 @@
 @import "tailwindcss";
 
-@theme {
-  /* Define the animation class name and duration */
-  --animate-blob: blob 7s infinite;
+:root {
+  --background: #0B0F19; 
+  --text-main: #F8FAFC;
+  --grid-color: rgba(255, 255, 255, 0.03);
+  --primary-glow: rgba(56, 189, 248, 0.4);
+}
 
-  /* Define the actual keyframes for the animation */
-  @keyframes blob {
-    20% { transform: translate(0px, 0px) scale(1); }
-    50% { transform: translate(30px, -50px) scale(1.1); }
-    80% { transform: translate(-20px, 20px) scale(0.9); }
-    100% { transform: translate(0px, 0px) scale(1); }
+body {
+  background-color: var(--background);
+  color: var(--text-main);
+  /* The Cyber-Physical Grid Background */
+  background-image: 
+    linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-attachment: fixed;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer utilities {
+  /* Frosted Glass Effect (Pure CSS for Tailwind v4 stability) */
+  .glass-panel {
+    background-color: rgb(19 27 43 / 0.6);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
   }
+
+  /* Intense Glass for specific active elements */
+  .glass-panel-active {
+    background-color: rgb(30 41 59 / 0.8);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid rgb(56 189 248 / 0.3);
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+  }
+
+  /* Neon Text Glow */
+  .text-glow {
+    text-shadow: 0 0 10px var(--primary-glow);
+  }
+}
+
+/* Custom Scrollbar for a sleek look */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }

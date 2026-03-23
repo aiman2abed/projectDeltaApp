@@ -1,146 +1,140 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import VideoPlayer from "@/components/VideoPlayer";
-import QuizEngine from "@/components/QuizEngine";
-import MathRenderer from "@/components/MathRenderer";
-import type { Lesson, ProgressUpdateRequest } from "@/types/api";
+
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase";
 
-export default function DiscoverFeed() {
-  const [lessons, setLessons] = useState<Lesson[]>([]);
+export default function DiscoverPage() {
+  const [lessons, setLessons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const sectionRefs = useRef<Array<HTMLElement | null>>([]);
-  
-  const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
     const fetchSmartFeed = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        router.push("/login");
-        return;
-      }
+      if (!session) return;
 
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/feed/smart", {
+        const response = await fetch("http://localhost:8000/api/feed/smart", {
           headers: {
-            "Authorization": `Bearer ${session.access_token}`,
-            "Content-Type": "application/json"
-          }
+            Authorization: `Bearer ${session.access_token}`,
+          },
         });
-
-        if (!res.ok) throw new Error("Feed unavailable");
-        
-        const data = await res.json();
-        setLessons(data); 
+        const data = await response.json();
+        setLessons(data);
       } catch (err) {
-        console.error("Error loading smart feed:", err);
+        console.error("Feed Sync Failed:", err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchSmartFeed();
-  }, [router, supabase]);
+  }, []);
 
-  const handleLessonSuccess = async (lessonIndex: number, lessonId: number, isFirstTry: boolean) => {
+  const handleInject = async (lessonId: number) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
-    const payload: ProgressUpdateRequest = {
-      user_id: 1, 
-      quality: isFirstTry ? 5 : 3, 
-    };
-
+    // Call your existing progress endpoint to start tracking this lesson
+    // We send quality: 3 as a 'neutral' starting point for the SM-2 algorithm
     try {
-      await fetch(`http://127.0.0.1:8000/api/progress/${lessonId}`, {
+      await fetch(`http://localhost:8000/api/progress/${lessonId}`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}` 
+          Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ quality: 3 }),
       });
-    } catch (error) {
-      console.error("Failed to sync progress:", error);
+      alert("Payload Injected: This lesson is now in your SM-2 queue!");
+    } catch (err) {
+      console.error("Injection failed:", err);
     }
-
-    const nextSection = sectionRefs.current[lessonIndex + 1];
-    if (!nextSection) return;
-
-    nextSection.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-      inline: "nearest",
-    });
   };
 
-  if (loading)
+  if (loading) {
     return (
-      <div className="h-[calc(100vh-64px)] flex flex-col items-center justify-center bg-slate-900 text-white">
-        <div className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-4"></div>
-        <p className="font-mono text-sm uppercase tracking-widest text-slate-400">Tuning the Algorithm...</p>
+      <div className="w-full h-[80vh] flex flex-col items-center justify-center gap-4">
+        <div className="w-12 h-12 border-4 border-sky-500/30 border-t-sky-400 rounded-full animate-spin" />
+        <p className="font-mono text-sky-400 text-sm tracking-widest">SYNCING GLOBAL REELS...</p>
       </div>
     );
+  }
 
   return (
-    // Note the dynamic height calc to account for the layout navbar and prevent double-scrolling
-    <main className="h-[calc(100vh-64px)] overflow-y-scroll snap-y snap-mandatory bg-gradient-to-b from-slate-900 to-slate-950 scrollbar-hide">
-      {lessons.map((lesson, index) => (
-        <section
-          key={lesson.id}
-          ref={(element) => {
-            sectionRefs.current[index] = element;
-          }}
-          className="h-[calc(100vh-64px)] w-full snap-start flex flex-col items-center justify-center p-4 sm:p-6"
+    <div className="fixed inset-0 top-16 bg-black overflow-y-scroll snap-y snap-mandatory scrollbar-hide">
+      {lessons.map((lesson) => (
+        <section 
+          key={lesson.id} 
+          className="h-[calc(100vh-4rem)] w-full snap-start relative flex items-center justify-center overflow-hidden"
         >
-          {/* Enhanced Glassmorphism & Shadow Card */}
-          <div className="max-w-md w-full bg-white rounded-[2rem] overflow-hidden shadow-2xl shadow-blue-900/20 ring-1 ring-white/10 flex flex-col h-[85vh] transition-all">
-            
-            {/* Cleaner Header without the debug counter */}
-            <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center z-10">
-              <span className="text-xs font-black tracking-widest uppercase text-slate-400">Spirelay <span className="text-blue-500">Stream</span></span>
-              <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-            </div>
+          {/* Background Video / Visualizer */}
+          <div className="absolute inset-0 z-0">
+            {lesson.video_url ? (
+              <video 
+                src={lesson.video_url} 
+                autoPlay loop muted playsInline
+                className="w-full h-full object-cover opacity-60"
+              />
+            ) : (
+              <div className="w-full h-full bg-[#0B0F19] opacity-40" />
+            )}
+            {/* Dark overlay for readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+          </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
-              <h2 className="text-2xl font-extrabold text-slate-900 leading-tight tracking-tight">{lesson.title}</h2>
+          {/* Interaction Bar (Right Side) */}
+          <div className="absolute right-6 bottom-40 z-20 flex flex-col gap-8 items-center">
+            <button 
+              onClick={() => handleInject(lesson.id)}
+              className="group flex flex-col items-center gap-1"
+            >
+              <div className="w-14 h-14 rounded-full glass-panel flex items-center justify-center border-sky-500/50 shadow-[0_0_20px_rgba(56,189,248,0.3)] group-hover:scale-110 transition-all duration-300">
+                <span className="text-2xl">⚡</span>
+              </div>
+              <span className="text-[10px] font-bold text-sky-400 uppercase tracking-tighter">Inject</span>
+            </button>
 
-              {lesson.video_url && (
-                <div className="rounded-2xl overflow-hidden shadow-sm border border-slate-100">
-                  <VideoPlayer url={lesson.video_url} mode="feed" />
-                </div>
-              )}
+            <button className="group flex flex-col items-center gap-1">
+              <div className="w-14 h-14 rounded-full glass-panel flex items-center justify-center border-white/10 group-hover:bg-red-500/20 transition-all">
+                <span className="text-2xl">❤️</span>
+              </div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Save</span>
+            </button>
+          </div>
 
-              <div className="prose prose-sm prose-slate text-slate-600">
-                <p className="leading-relaxed">{lesson.content_text}</p>
+          {/* Content Info (Bottom) */}
+          <div className="relative z-10 w-full max-w-2xl px-8 flex flex-col justify-end h-full pb-20 pointer-events-none">
+            <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-10 duration-700">
+              
+              <div className="flex items-center gap-3 pointer-events-auto">
+                <span className="px-3 py-1 bg-sky-500 text-white text-[10px] font-black uppercase tracking-widest rounded shadow-[0_0_15px_rgba(56,189,248,0.5)]">
+                  Module ID: {lesson.module_id}
+                </span>
+                <span className="text-sm font-bold text-slate-300">Spirelay Community</span>
               </div>
 
+              <h2 className="text-4xl font-black text-white tracking-tight text-glow pointer-events-auto">
+                {lesson.title}
+              </h2>
+
+              {/* Math Payload Container */}
               {lesson.content_math && (
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <MathRenderer formula={lesson.content_math} />
+                <div className="p-4 glass-panel border-sky-500/30 rounded-2xl w-full max-w-md pointer-events-auto">
+                  <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-2">Math Payload</p>
+                  <div className="text-lg md:text-xl font-mono text-slate-200 text-center">
+                    {lesson.content_math}
+                  </div>
                 </div>
               )}
 
-              {lesson.quiz_question && (
-                <div className="pt-6 mt-6 border-t border-slate-100">
-                  <QuizEngine
-                    question={lesson.quiz_question}
-                    options={lesson.quiz_options || []}
-                    correctAnswer={lesson.correct_answer || ""}
-                    onSuccess={(isFirstTry) => {
-                      handleLessonSuccess(index, lesson.id, isFirstTry);
-                    }}
-                  />
-                </div>
-              )}
+              <p className="text-slate-300 text-base leading-relaxed max-w-lg pointer-events-auto">
+                {lesson.content_text}
+              </p>
             </div>
           </div>
         </section>
       ))}
-    </main>
+    </div>
   );
 }
