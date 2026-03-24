@@ -16,15 +16,15 @@ security = HTTPBearer()
 
 # DTO: This prevents SQLAlchemy "DetachedInstanceErrors" after the session closes
 class ValidatedUser:
-    def __init__(self, id: str, email: str, role: str):
+    def __init__(self, id: str, email: str, role: str, first_name: str = "", last_name: str = ""):
         self.id = id
         self.email = email
         self.role = role
+        self.first_name = first_name
+        self.last_name = last_name
 
 async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(security)):
-    """Validates token AND ensures the user exists in our local database."""
     token = auth.credentials
-    # 1. Verify token with Supabase
     try:
         user_response = supabase.auth.get_user(token)
         if not user_response.user:
@@ -32,25 +32,35 @@ async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(security
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Supabase Auth Error: {str(e)}")
         
-    # 2. Lazy Sync with our database
     db = SessionLocal()
     try:
         db_user = db.query(models.User).filter(models.User.id == user_response.user.id).first()
+        
+        # Extract metadata from Supabase
+        meta = user_response.user.user_metadata or {}
+        f_name = meta.get("first_name", "")
+        l_name = meta.get("last_name", "")
         
         if not db_user:
             db_user = models.User(
                 id=user_response.user.id,
                 email=user_response.user.email,
-                role="user"
+                role="user",
+                first_name=f_name,
+                last_name=l_name
             )
             db.add(db_user)
             db.commit()
             db.refresh(db_user)
             
-        # Safely extract data into our DTO before the 'finally' block closes the DB!
-        return ValidatedUser(id=db_user.id, email=db_user.email, role=db_user.role)
+        return ValidatedUser(
+            id=db_user.id, 
+            email=db_user.email, 
+            role=db_user.role,
+            first_name=getattr(db_user, 'first_name', ''),
+            last_name=getattr(db_user, 'last_name', '')
+        )
     except Exception as db_err:
-        # Stop masking DB errors as 401s! Let them bubble up so we can see them.
         print(f"Database Error in Lazy Sync: {db_err}")
         raise HTTPException(status_code=500, detail="Internal Database Synchronization Error")
     finally:

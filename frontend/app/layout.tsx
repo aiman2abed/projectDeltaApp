@@ -22,8 +22,8 @@ export default function RootLayout({
         {/* Smart Global Navigation Bar */}
         <Navbar />
 
-        {/* Main Content Wrapper */}
-        <main className="flex-1 w-full flex flex-col relative">
+        {/* Main Content Wrapper with Max-Width and Responsive Edge Padding */}
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8 md:py-12 flex flex-col relative">
           {children}
         </main>
 

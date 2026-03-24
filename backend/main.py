@@ -40,13 +40,14 @@ def read_root():
 
 @app.get("/api/users/me")
 def get_user_profile(current_user = Depends(get_current_user)):
-    """Allows the Next.js frontend to check if the user is an admin or not."""
+    """Allows the Next.js frontend to check user identity and roles."""
     return {
         "id": current_user.id,
         "email": current_user.email,
-        "role": current_user.role
+        "role": current_user.role,
+        "first_name": current_user.first_name,
+        "last_name": current_user.last_name
     }
-
 # ==========================================
 # 3. MODULES API (CRUD & Relationships)
 # ==========================================

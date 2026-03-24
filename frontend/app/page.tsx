@@ -3,17 +3,27 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
   const [stats, setStats] = useState<any[]>([]);
   const [dueCount, setDueCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState("Engineer"); // State for personalized greeting
+  const router = useRouter();
 
-  useEffect(() => {
+useEffect(() => {
     const fetchTelemetry = async () => {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
+
+      // Extract the exact first name from the user metadata
+      if (session.user?.user_metadata?.first_name) {
+        setUserName(session.user.user_metadata.first_name);
+      } else if (session.user?.email) {
+        setUserName(session.user.email.split('@')[0]); // Fallback
+      }
 
       const headers = { Authorization: `Bearer ${session.access_token}` };
 
@@ -38,15 +48,21 @@ export default function Dashboard() {
     fetchTelemetry();
   }, []);
 
-  // Find the module with the most progress to show in the "Priority" card
+  // Find the module with the lowest mastery score (needs the most review), or highest if none are low.
   const priorityModule = stats.length > 0 
-    ? stats.reduce((prev, current) => (prev.mastery_score > current.mastery_score) ? prev : current)
+    ? stats.reduce((prev, current) => (prev.mastery_score < current.mastery_score) ? prev : current)
     : null;
 
   // Calculate average retention
   const avgRetention = stats.length > 0 
     ? Math.round(stats.reduce((acc, curr) => acc + curr.mastery_score, 0) / stats.length) 
     : 0;
+
+  const handlePriorityClick = () => {
+    if (priorityModule) {
+      router.push(`/modules/${priorityModule.module_id}`);
+    }
+  };
 
   if (loading) {
     return <div className="w-full h-96 flex items-center justify-center text-sky-400 font-mono animate-pulse">
@@ -64,7 +80,7 @@ export default function Dashboard() {
             Command Center
           </p>
           <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight">
-            Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-600 text-glow">Engineer</span>
+            Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-600 text-glow capitalize">{userName}</span>
           </h1>
         </div>
         <Link 
@@ -81,7 +97,7 @@ export default function Dashboard() {
         {/* Memory Retention (Live) */}
         <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2 hover:border-sky-500/30 transition-colors group">
           <div className="flex items-center gap-3 text-slate-400 group-hover:text-sky-400 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012-2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
             <span className="text-sm font-bold uppercase tracking-wider">Memory Retention</span>
           </div>
           <div className="flex items-end gap-2">
@@ -124,40 +140,74 @@ export default function Dashboard() {
             Priority Module
           </h2>
           
-          <div className="glass-panel-active p-8 rounded-3xl relative overflow-hidden group cursor-pointer">
+          <div 
+            onClick={handlePriorityClick}
+            className="glass-panel-active p-8 rounded-3xl relative overflow-hidden group cursor-pointer hover:shadow-[0_0_30px_rgba(56,189,248,0.2)] transition-all duration-300"
+          >
             <div className="absolute right-0 top-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-sky-400/20 transition-colors duration-500" />
             
             <div className="relative z-10 flex flex-col gap-4">
-              <span className="px-3 py-1 text-xs font-bold uppercase tracking-widest text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-full w-max">
-                {priorityModule?.module_title || "Initializing..."}
-              </span>
+              <div className="flex justify-between items-start">
+                <span className="px-3 py-1 text-xs font-bold uppercase tracking-widest text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-full w-max">
+                  {priorityModule?.module_title || "Initializing..."}
+                </span>
+                <span className="text-sky-400 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
+                  Enter Sequence →
+                </span>
+              </div>
+
               <h3 className="text-3xl font-extrabold text-white">
-                {priorityModule ? `Mastery Level: ${priorityModule.mastery_score}%` : "Database Syncing..."}
+                {priorityModule ? `Mastery Level: ${Math.round(priorityModule.mastery_score)}%` : "Database Syncing..."}
               </h3>
               <p className="text-slate-400 max-w-md leading-relaxed">
                 {priorityModule 
-                  ? `Your memory decay curve suggests focusing on ${priorityModule.module_title} today to maintain your current retention rate.` 
+                  ? `Your memory decay curve suggests focusing on ${priorityModule.module_title} today to maintain optimal retention.` 
                   : "Scanning your neural decay patterns to determine the optimal study path..."}
               </p>
               
               <div className="mt-4 flex items-center gap-4">
-                <div className="w-full bg-slate-800/50 rounded-full h-2 max-w-xs border border-white/5">
+                <div className="w-full bg-slate-800/50 rounded-full h-2 max-w-xs border border-white/5 overflow-hidden">
                   <div 
                     className="bg-gradient-to-r from-blue-500 to-sky-400 h-2 rounded-full transition-all duration-1000" 
                     style={{ width: `${priorityModule?.mastery_score || 0}%` }}
                   />
                 </div>
-                <span className="text-sm font-bold text-slate-400">{priorityModule?.mastery_score || 0}% Mastered</span>
+                <span className="text-sm font-bold text-slate-400">{Math.round(priorityModule?.mastery_score || 0)}% Mastered</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Sidebar (Right) */}
+        {/* Sidebar (Right) - Live System Activity */}
         <div className="flex flex-col gap-6">
           <h2 className="text-xl font-bold text-slate-200">System Activity</h2>
-          <div className="glass-panel p-6 rounded-3xl flex flex-col gap-6 h-full items-center justify-center text-center text-slate-500 italic text-sm">
-            <p>Recent activity logging is currently syncing with the database terminal.</p>
+          <div className="glass-panel p-6 rounded-3xl flex flex-col gap-4 h-full">
+            {stats.length === 0 ? (
+               <div className="flex-1 flex items-center justify-center text-center text-slate-500 italic text-sm">
+                 <p>Awaiting data injection. Visit the Discover page to add payloads to your engine.</p>
+               </div>
+            ) : (
+              <div className="flex flex-col gap-4 overflow-y-auto max-h-[300px] scrollbar-hide pr-2">
+                {stats.map((stat, idx) => (
+                  <Link href={`/modules/${stat.module_id}`} key={idx} className="flex flex-col gap-2 p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/10 group cursor-pointer">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-bold text-white group-hover:text-sky-400 transition-colors truncate pr-4">
+                        {stat.module_title}
+                      </span>
+                      <span className="text-xs font-mono text-slate-400">
+                        {stat.lessons_started}/{stat.total_lessons}
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-800/50 rounded-full h-1 border border-white/5">
+                      <div 
+                        className={`h-1 rounded-full ${stat.mastery_score > 80 ? 'bg-emerald-400' : stat.mastery_score > 40 ? 'bg-amber-400' : 'bg-sky-400'}`}
+                        style={{ width: `${stat.mastery_score}%` }}
+                      />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
