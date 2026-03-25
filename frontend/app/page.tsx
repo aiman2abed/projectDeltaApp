@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import type { ModuleProgressSummary } from "@/types/api";
 
 export default function Dashboard() {
+  // Dashboard owns telemetry state used by both KPI cards and the priority panel.
   const [stats, setStats] = useState<ModuleProgressSummary[]>([]);
   const [dueCount, setDueCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -14,6 +15,7 @@ export default function Dashboard() {
   const router = useRouter();
 
   useEffect(() => {
+    // Synchronizes the landing dashboard with auth identity and backend progress snapshots.
     const fetchTelemetry = async () => {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
@@ -57,6 +59,7 @@ export default function Dashboard() {
     : 0;
 
   const handlePriorityClick = () => {
+    // Interaction ownership: clicking the hero card navigates into the chosen module detail page.
     if (priorityModule) {
       router.push(`/modules/${priorityModule.module_id}`);
     }
@@ -69,6 +72,7 @@ export default function Dashboard() {
   }
 
   return (
+    // Page container controls vertical rhythm for header, KPI row, and two-column content region.
     <div className="w-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
       {/* Header Section */}
@@ -127,8 +131,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4">
-        
-        {/* Main Action Area (Priority Module) */}
+        {/* Left content column owns primary CTA and progress narrative. */}
         <div className="lg:col-span-2 flex flex-col gap-6">
           <h2 className="text-xl font-bold text-slate-200 flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
@@ -173,7 +176,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Sidebar (Right) - Live System Activity */}
+        {/* Right sidebar owns module activity list and remains secondary to the priority card. */}
         <div className="flex flex-col gap-6">
           <h2 className="text-xl font-bold text-slate-200">System Activity</h2>
           <div className="glass-panel p-6 rounded-3xl flex flex-col gap-4 h-full">

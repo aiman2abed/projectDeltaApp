@@ -6,7 +6,7 @@ export const createClient = () =>
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
-        // 🔥 This forces Supabase to forget the user when the browser closes
+        // Session ownership is scoped to the browser tab lifetime to reduce stale-login surprises.
         storage: typeof window !== "undefined" ? window.sessionStorage : undefined,
       }
     }
