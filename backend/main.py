@@ -8,7 +8,7 @@ import random
 # Internal app imports
 import models, schemas
 from database import SessionLocal
-from auth import get_current_user, get_admin_user
+from auth import get_current_user, get_admin_user, ValidatedUser
 
 # Initialize FastAPI application
 app = FastAPI(
@@ -56,7 +56,7 @@ def read_root():
     return {"status": "success", "message": "The Spirelay API is live!"}
 
 @app.get("/api/users/me")
-def get_user_profile(current_user: models.User = Depends(get_current_user)):
+def get_user_profile(current_user: ValidatedUser = Depends(get_current_user)):
     """
     Identity Verification Endpoint. (Protected)
     Validates the Supabase JWT token and returns the current user's profile and RBAC (Role-Based Access Control) level.
@@ -75,7 +75,10 @@ def get_user_profile(current_user: models.User = Depends(get_current_user)):
 # ==========================================
 
 @app.get("/api/modules", response_model=List[schemas.ModuleResponse])
-def get_modules(db: Session = Depends(get_db)):
+def get_modules(
+    db: Session = Depends(get_db),
+    current_user: ValidatedUser = Depends(get_current_user)
+):
     """
     Fetch all high-level engineering modules/topics.
     Publicly accessible to logged-in users.
@@ -83,7 +86,11 @@ def get_modules(db: Session = Depends(get_db)):
     return db.query(models.Module).order_by(models.Module.id).all()
 
 @app.get("/api/modules/{module_id}/lessons", response_model=List[schemas.LessonResponse])
-def get_lessons_for_module(module_id: int, db: Session = Depends(get_db)):
+def get_lessons_for_module(
+    module_id: int,
+    db: Session = Depends(get_db),
+    current_user: ValidatedUser = Depends(get_current_user)
+):
     """
     Fetch all micro-lessons mapped to a specific module.
     """
@@ -140,12 +147,19 @@ def delete_module(module_id: int, db: Session = Depends(get_db), admin_user: mod
 # ==========================================
 
 @app.get("/api/lessons", response_model=List[schemas.LessonResponse])
-def get_all_lessons(db: Session = Depends(get_db)):
+def get_all_lessons(
+    db: Session = Depends(get_db),
+    current_user: ValidatedUser = Depends(get_current_user)
+):
     """Fetch every lesson in the entire database."""
     return db.query(models.Lesson).order_by(models.Lesson.id).all()
 
 @app.get("/api/lessons/{lesson_id}", response_model=schemas.LessonResponse)
-def get_lesson(lesson_id: int, db: Session = Depends(get_db)):
+def get_lesson(
+    lesson_id: int,
+    db: Session = Depends(get_db),
+    current_user: ValidatedUser = Depends(get_current_user)
+):
     """Fetch the specific technical payload for a single lesson node."""
     lesson = db.query(models.Lesson).filter(models.Lesson.id == lesson_id).first()
     if lesson is None:
@@ -205,7 +219,7 @@ def mark_lesson_understood(
     lesson_id: int,
     payload: schemas.ProgressUpdateRequest,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: ValidatedUser = Depends(get_current_user)
 ):
     """
     Core Spaced Repetition Logic (SM-2 Algorithm).
@@ -279,7 +293,7 @@ def mark_lesson_understood(
 @app.get("/api/progress/due")
 def get_due_reviews(
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: ValidatedUser = Depends(get_current_user)
 ):
     """Calculates how many reviews are currently due for the user's dashboard badge."""
     user_id = current_user.id
@@ -295,7 +309,7 @@ def get_due_reviews(
 @app.get("/api/progress/summary", response_model=List[schemas.ModuleProgressSummary])
 def get_progress_summary(
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: ValidatedUser = Depends(get_current_user)
 ):
     """
     Generates Mastery Scores for the home dashboard charts.
@@ -337,7 +351,7 @@ def get_progress_summary(
 @app.get("/api/feed/smart", response_model=List[schemas.LessonResponse])
 def get_smart_feed(
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: ValidatedUser = Depends(get_current_user)
 ):
     """
     The Smart Feed Discovery Algorithm.

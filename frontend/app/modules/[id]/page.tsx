@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase";
 
 interface Lesson {
   id: number;
@@ -15,22 +16,31 @@ export default function ModuleIndexPage() {
   const router = useRouter();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
+  const supabase = createClient();
 
   useEffect(() => {
-    fetch(`http://localhost:8000/api/modules/${params.id}/lessons`)
-      .then((res) => {
+    const fetchLessons = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setLessons([]);
+          return;
+        }
+
+        const res = await fetch(`http://localhost:8000/api/modules/${params.id}/lessons`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
         if (!res.ok) throw new Error("Failed to fetch lessons");
-        return res.json();
-      })
-      .then((data) => {
+        const data = await res.json();
         setLessons(data);
-        setLoading(false);
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error(error);
+      } finally {
         setLoading(false);
-      });
-  }, [params.id]);
+      }
+    };
+    void fetchLessons();
+  }, [params.id, supabase]);
 
   if (loading) return <div className="p-10 text-sky-400 font-mono animate-pulse">DECRYPTING MODULE ARCHIVES...</div>;
 

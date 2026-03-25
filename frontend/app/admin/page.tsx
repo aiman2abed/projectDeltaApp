@@ -16,10 +16,24 @@ type BanModalState = {
   userEmail: string;
 };
 
+type Module = {
+  id: number;
+  title: string;
+  description?: string | null;
+};
+
+type UserRow = {
+  id: string;
+  email: string;
+  role: string;
+  first_name?: string | null;
+  last_name?: string | null;
+};
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<"modules" | "users">("modules");
-  const [modules, setModules] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Dynamic Modal State (Modules/Lessons)
@@ -88,7 +102,7 @@ export default function AdminPage() {
     setModal({ isOpen: true, mode: "new_module" });
   };
 
-  const openEditModule = (mod: any) => {
+  const openEditModule = (mod: Module) => {
     setForm({ ...form, title: mod.title, description: mod.description || "" });
     setModal({ isOpen: true, mode: "edit_module", targetId: mod.id });
   };

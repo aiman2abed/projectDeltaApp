@@ -4,15 +4,30 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 
+type Module = {
+  id: number;
+  title: string;
+  description?: string | null;
+};
+
 export default function ModulesPage() {
-  const [modules, setModules] = useState<any[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const supabase = createClient();
 
   useEffect(() => {
     const fetchModules = async () => {
       try {
-        const response = await fetch("http://localhost:8000/api/modules");
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setModules([]);
+          return;
+        }
+
+        const response = await fetch("http://localhost:8000/api/modules", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
         const data = await response.json();
         setModules(data);
       } catch (err) {
@@ -22,7 +37,7 @@ export default function ModulesPage() {
       }
     };
     fetchModules();
-  }, []);
+  }, [supabase]);
 
   const filteredModules = modules.filter(mod => 
     mod.title.toLowerCase().includes(searchQuery.toLowerCase()) || 

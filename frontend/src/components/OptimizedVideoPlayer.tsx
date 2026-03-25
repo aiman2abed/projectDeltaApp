@@ -61,12 +61,13 @@ export default function OptimizedVideoPlayer({
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const sendYTCmd = useCallback((func: string, args: any[] = []) => {
+  const sendYTCmd = useCallback((func: string, args: unknown[] = []) => {
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage(
         JSON.stringify({ event: "command", func, args }),
-        "*"
+        "https://www.youtube.com"
       );
     }
   }, []);
@@ -74,10 +75,15 @@ export default function OptimizedVideoPlayer({
   // 1. Play/Pause based on scroll
   useEffect(() => {
     if (!isFeed) return;
+
+    if (playTimerRef.current) {
+      clearTimeout(playTimerRef.current);
+      playTimerRef.current = null;
+    }
     
     if (isActive) {
       setIsPlaying(true);
-      setTimeout(() => {
+      playTimerRef.current = setTimeout(() => {
         if (isYouTube) {
            sendYTCmd("playVideo");
            // Ensure it starts with the correct mute state
@@ -92,8 +98,13 @@ export default function OptimizedVideoPlayer({
       if (isYouTube) sendYTCmd("pauseVideo");
       else if (videoRef.current) videoRef.current.pause();
     }
-  }, [isActive, isYouTube, sendYTCmd, isFeed]); 
-  // removed currentlyMuted from deps so it doesn't accidentally trigger a play event
+    return () => {
+      if (playTimerRef.current) {
+        clearTimeout(playTimerRef.current);
+        playTimerRef.current = null;
+      }
+    };
+  }, [isActive, isYouTube, sendYTCmd, isFeed, currentlyMuted]); 
 
   // 2. 🛡️ NEW: Instantly react to mute toggles while the video is playing
   useEffect(() => {
