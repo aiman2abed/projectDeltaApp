@@ -213,7 +213,7 @@ def mark_lesson_understood(
     and ease factor to predict exactly when they will forget the concept.
     """
     user_id = current_user.id
-    q = payload.quality 
+    q = max(0, min(5, payload.quality))
     
     # 1. Fetch existing telemetry or initialize a new neural pathway
     progress = db.query(models.UserProgress).filter(
@@ -230,6 +230,17 @@ def mark_lesson_understood(
             interval=0
         )
         db.add(progress)
+
+    # Anti-spam guardrail: do not permit additional "success" submissions
+    # before the current item is due.
+    if progress.next_review_date and progress.next_review_date > date.today() and q >= 3:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Review already scheduled for {progress.next_review_date.isoformat()}. "
+                "Wait until it is due before logging another successful recall."
+            ),
+        )
 
     # 2. Apply SM-2 Interval Calculation
     if q >= 3:  # Successful recall (Hard, Good, Easy)

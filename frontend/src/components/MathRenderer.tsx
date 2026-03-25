@@ -13,7 +13,14 @@ export default function MathRenderer({ formula }: MathRendererProps) {
         Core Formula
       </p>
       <div className="text-blue-900">
-        <BlockMath math={formula} />
+        <BlockMath
+          math={formula}
+          renderError={(error) => (
+            <span className="text-xs text-red-600 font-semibold break-all">
+              Invalid math expression: {error.message}
+            </span>
+          )}
+        />
       </div>
     </div>
   );

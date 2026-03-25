@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
-// Define routes that do NOT require authentication
+// Routes that do NOT require authentication
 const PUBLIC_ROUTES = ["/login", "/signup", "/update-password"];
+// Routes meant for unauthenticated users only
+const GUEST_ONLY_ROUTES = ["/login", "/signup"];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -19,10 +21,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
       const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
 
+      const isGuestOnly = GUEST_ONLY_ROUTES.includes(pathname);
+
       if (!session && !isPublicRoute) {
         // Intruder detected on a private route -> Bounce to login
         router.push("/login");
-      } else if (session && isPublicRoute) {
+      } else if (session && isGuestOnly) {
         // Logged-in user trying to access login/signup -> Bounce to dashboard
         router.push("/");
       } else {
@@ -36,10 +40,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     // Listen for live login/logout events across tabs
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+      const isGuestOnly = GUEST_ONLY_ROUTES.includes(pathname);
       
       if (!session && !isPublicRoute) {
         router.push("/login");
-      } else if (session && isPublicRoute) {
+      } else if (session && isGuestOnly) {
         router.push("/");
       } else {
         setIsAuthorized(true);
