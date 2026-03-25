@@ -157,7 +157,7 @@ export default function OptimizedVideoPlayer({
     <div className="absolute inset-0 z-0 bg-[#0B0F19] overflow-hidden pointer-events-none">
       <div className="absolute inset-0 z-0 pointer-events-none">
         {isYouTube ? (
-          <iframe src={ytUrl} className="absolute top-1/2 left-1/2 w-[150vw] h-[150vh] -translate-x-1/2 -translate-y-1/2 opacity-20 blur-3xl scale-125 pointer-events-none" allow="autoplay; encrypted-media" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.18),transparent_65%)] opacity-70" />
         ) : (
           <video src={url} loop muted playsInline className="w-full h-full object-cover opacity-20 blur-3xl scale-125 pointer-events-none" />
         )}
@@ -167,7 +167,7 @@ export default function OptimizedVideoPlayer({
       <div className={`absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-full px-6 z-10 pointer-events-auto ${frameWidthMap[aspect]}`}>
         <div className={`w-full ${aspectClassMap[aspect]} rounded-2xl overflow-hidden border border-sky-500/20 shadow-[0_0_50px_rgba(56,189,248,0.15)] bg-black/80 relative backdrop-blur-md`}>
           {isYouTube ? (
-            <iframe ref={iframeRef} src={ytUrl} className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none ${ytScaleMap[aspect][fit]}`} allow="autoplay; encrypted-media" />
+            <iframe ref={iframeRef} src={ytUrl} title="Spirelay reel video player" loading="lazy" className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none ${ytScaleMap[aspect][fit]}`} allow="autoplay; encrypted-media" />
           ) : (
             <video ref={videoRef} src={url} loop muted playsInline className={`w-full h-full ${fit === "cover" ? "object-cover" : "object-contain"} pointer-events-none`} />
           )}

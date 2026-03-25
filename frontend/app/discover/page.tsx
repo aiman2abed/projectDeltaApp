@@ -35,6 +35,7 @@ export default function DiscoverPage() {
   const [activeReelIndex, setActiveReelIndex] = useState(0); 
   const [isGlobalMuted, setIsGlobalMuted] = useState(true); // 🔊 NEW: Global mute state
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -60,20 +61,29 @@ export default function DiscoverPage() {
   }, [supabase]);
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const sections = Array.from(container.querySelectorAll<HTMLElement>("[data-index]"));
     observerRef.current = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const index = Number(entry.target.getAttribute("data-index"));
-            setActiveReelIndex(index);
+            setActiveReelIndex((prev) => (prev === index ? prev : index));
           }
         });
       },
       { threshold: 0.6 }
     );
 
-    return () => observerRef.current?.disconnect();
-  }, []);
+    sections.forEach((section) => observerRef.current?.observe(section));
+
+    return () => {
+      sections.forEach((section) => observerRef.current?.unobserve(section));
+      observerRef.current?.disconnect();
+    };
+  }, [lessons.length]);
 
   const handleInject = async (lessonId: number) => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -100,7 +110,7 @@ export default function DiscoverPage() {
   }
 
   return (
-    <div className="fixed inset-0 top-16 bg-black overflow-y-scroll snap-y snap-mandatory scrollbar-hide">
+    <div ref={containerRef} className="fixed inset-0 top-16 bg-black overflow-y-scroll snap-y snap-mandatory scrollbar-hide">
       {lessons.map((lesson, index) => {
         const aspect = normalizeAspect(lesson.video_aspect);
         const fit = normalizeFit(lesson.video_fit);
@@ -112,9 +122,6 @@ export default function DiscoverPage() {
           <section
             key={lesson.id}
             data-index={index}
-            ref={(el) => {
-              if (el && observerRef.current) observerRef.current.observe(el);
-            }}
             className="h-[calc(100vh-4rem)] w-full snap-start relative flex items-center justify-center overflow-hidden"
           >
             {lesson.video_url ? (
