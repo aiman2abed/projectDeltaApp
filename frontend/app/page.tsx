@@ -179,9 +179,9 @@ export default function Dashboard() {
         {/* Right sidebar owns module activity list and remains secondary to the priority card. */}
         <div className="flex flex-col gap-6">
           <h2 className="text-xl font-bold text-slate-200">System Activity</h2>
-          <div className="glass-panel p-6 rounded-3xl flex flex-col gap-4 h-full">
+          <div className="glass-panel p-6 rounded-3xl flex flex-col gap-4 h-full  overflow-hidden relative">
             {stats.length === 0 ? (
-               <div className="flex-1 flex items-center justify-center text-center text-slate-500 italic text-sm">
+               <div className="flex-1 flex items-center justify-center text-center text-slate-500 italic text-sm  px-4  animate-pulse">
                  <p>Awaiting data injection. Visit the Discover page to add payloads to your engine.</p>
                </div>
             ) : (
