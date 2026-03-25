@@ -10,12 +10,14 @@ const PUBLIC_ROUTES = ["/login", "/signup", "/update-password"];
 const GUEST_ONLY_ROUTES = ["/login", "/signup"];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
+  // Guard-level state controls whether private route content can render at all.
   const [isAuthorized, setIsAuthorized] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createClient();
 
   useEffect(() => {
+    // Keeps route access synchronized with current session and current route classification.
     const checkSecurityClearance = async () => {
       const { data: { session } } = await supabase.auth.getSession();
 
@@ -39,7 +41,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
     checkSecurityClearance();
 
-    // Listen for live login/logout events across tabs
+    // Syncs cross-tab auth transitions so route protection remains consistent everywhere.
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
       const isGuestOnly = GUEST_ONLY_ROUTES.includes(pathname);
@@ -56,9 +58,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     });
 
     const handleVisibilityOrFocus = () => {
+      // Re-validates session when user returns to this tab/window.
       void checkSecurityClearance();
     };
 
+    // Defensive polling for token/session drift between auth callbacks.
     const recheckInterval = window.setInterval(() => {
       void checkSecurityClearance();
     }, 1500);
@@ -74,7 +78,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     };
   }, [pathname, router, supabase.auth]);
 
-  // Show a sleek "Verifying" screen while checking credentials to prevent flashing private data
+  // Loading layer owns the full viewport to prevent private content flash before access resolves.
   if (!isAuthorized && !PUBLIC_ROUTES.includes(pathname)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0B0F19]">

@@ -14,11 +14,13 @@ interface Lesson {
 export default function ModuleIndexPage() {
   const params = useParams();
   const router = useRouter();
+  // Page owns lesson listing state for a single module boundary.
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
   useEffect(() => {
+    // Synchronizes lesson list whenever module route id changes.
     const fetchLessons = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -45,8 +47,10 @@ export default function ModuleIndexPage() {
   if (loading) return <div className="p-10 text-sky-400 font-mono animate-pulse">DECRYPTING MODULE ARCHIVES...</div>;
 
   return (
+    // Module detail screen layout: back navigation, heading, then lesson collection region.
     <div className="w-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-4xl mx-auto">
       <button 
+        // Interaction ownership: returns user to top-level module explorer.
         onClick={() => router.push('/modules')}
         className="text-sky-400 hover:text-sky-300 text-sm font-bold tracking-widest uppercase flex items-center gap-2 w-max transition-colors"
       >

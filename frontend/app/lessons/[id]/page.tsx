@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import OptimizedVideoPlayer from "@/components/OptimizedVideoPlayer"; // 🛡️ IMPORT NEW PLAYER
+import OptimizedVideoPlayer from "@/components/OptimizedVideoPlayer";
 import QuizEngine from "@/components/QuizEngine";
 import MathRenderer from "@/components/MathRenderer";
 import type { Lesson, ProgressUpdateRequest } from "@/types/api";
@@ -12,11 +12,13 @@ export default function LessonPage() {
   const router = useRouter();
   const supabase = createClient();
   
+  // Page owns lesson payload state; child components render read-only slices of this data.
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Synchronizes page content with the route id and current authenticated session.
     const fetchLessonData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -41,6 +43,7 @@ export default function LessonPage() {
   }, [params.id, router, supabase]);
 
   const handleMarkAsUnderstood = async () => {
+    // Interaction ownership: commits successful completion to progress API then returns to module index.
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
@@ -66,6 +69,7 @@ export default function LessonPage() {
   if (!lesson) return <div className="p-10 text-center text-red-500 font-bold">Error: Lesson data corrupted.</div>;
 
   return (
+    // Vertical lesson layout controls title, media, content, quiz, and completion CTA hierarchy.
     <div className="max-w-4xl mx-auto py-8 flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
       <div>
@@ -74,8 +78,8 @@ export default function LessonPage() {
       </div>
 
       {lesson.video_url && (
+        // Media region ownership is delegated to OptimizedVideoPlayer in focus mode.
         <div className="rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-           {/* 🛡️ REPLACED WITH NEW COMPONENT IN FOCUS MODE */}
           <OptimizedVideoPlayer url={lesson.video_url} mode="focus" />
         </div>
       )}
@@ -95,6 +99,7 @@ export default function LessonPage() {
 
       {/* Quiz Engine */}
       {lesson.quiz_question && lesson.quiz_options && lesson.correct_answer && (
+        // Parent controls unlock state; QuizEngine only reports success via callback boundary.
         <div className="glass-panel-active p-8 rounded-2xl">
           <p className="text-[10px] font-bold tracking-[0.2em] text-sky-400 uppercase mb-4">Verification Check</p>
           <QuizEngine
