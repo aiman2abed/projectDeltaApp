@@ -11,12 +11,14 @@ type Module = {
 };
 
 export default function ModulesPage() {
+  // Page owns full module catalog state and local search filtering state.
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const supabase = createClient();
 
   useEffect(() => {
+    // Synchronizes visible module cards with backend data for the current session.
     const fetchModules = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -47,6 +49,7 @@ export default function ModulesPage() {
   if (loading) return <div className="p-10 text-sky-400 font-mono animate-pulse">SYNCING ARCHIVES...</div>;
 
   return (
+    // Screen ownership: header/search controls on top, module card grid in the content region.
     <div className="w-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>

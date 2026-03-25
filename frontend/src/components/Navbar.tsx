@@ -9,12 +9,13 @@ export default function Navbar() {
   const router = useRouter();
   const supabase = createClient();
 
-  // Hide navbar on auth pages
+  // Auth pages own their full-screen layout, so the shared navigation shell is suppressed there.
   if (pathname === "/login" || pathname === "/signup") {
     return null;
   }
 
   const handleLogout = async () => {
+    // Interaction ownership: this clears auth state, then redirects into the guest route boundary.
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
@@ -31,8 +32,10 @@ export default function Navbar() {
   ];
 
   return (
+    // Sticky header layer that stays above page content with z-50 ownership.
     <header className="sticky top-0 z-50 w-full glass-panel border-b-0 border-white/5">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        {/* Left header region owns brand identity and desktop route navigation. */}
         <div className="flex items-center gap-8">
           
           {/* Brand Logo & Name */}
@@ -81,7 +84,7 @@ export default function Navbar() {
           </nav>
         </div>
         
-        {/* Profile / Auth Actions */}
+        {/* Right header region owns session-level actions only. */}
         <div className="flex items-center gap-4">
           <button
             onClick={handleLogout}

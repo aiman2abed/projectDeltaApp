@@ -30,16 +30,20 @@ const normalizeFit = (fit?: string | null): ReelFit => {
 };
 
 export default function DiscoverPage() {
+  // Page-level state owns feed data and reel-level playback coordination.
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeReelIndex, setActiveReelIndex] = useState(0);
   const [isGlobalMuted, setIsGlobalMuted] = useState(true);
 
+  // Ref to the live IntersectionObserver instance that tracks reel visibility ownership.
   const observerRef = useRef<IntersectionObserver | null>(null);
+  // Ref to the scroll container DOM region that hosts full-screen reel sections.
   const containerRef = useRef<HTMLDivElement | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
+    // Synchronizes Discover feed with authenticated user context on first mount.
     const fetchSmartFeed = async () => {
       const {
         data: { session },
@@ -68,6 +72,7 @@ export default function DiscoverPage() {
   }, [supabase]);
 
   useEffect(() => {
+    // Keeps active index in bounds when feed size changes after refreshes.
     if (lessons.length === 0) {
       setActiveReelIndex(0);
       return;
@@ -79,6 +84,7 @@ export default function DiscoverPage() {
   }, [activeReelIndex, lessons]);
 
   useEffect(() => {
+    // Assigns active reel ownership based on what section dominates the viewport.
     const container = containerRef.current;
     if (!container) return;
 
@@ -107,6 +113,7 @@ export default function DiscoverPage() {
   }, [lessons]);
 
   const handleInject = async (lessonId: number) => {
+    // Interaction ownership: this handler adds the current lesson into the spaced-repetition queue.
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -141,6 +148,7 @@ export default function DiscoverPage() {
   }
 
   return (
+    // Full-screen feed viewport under navbar; this container owns vertical snap behavior.
     <div
       ref={containerRef}
       className="fixed inset-0 top-16 snap-y snap-mandatory overflow-y-scroll bg-black scrollbar-hide"
@@ -190,9 +198,11 @@ export default function DiscoverPage() {
               </div>
             )}
 
+            {/* Overlay stack: these z-indexed gradients are visual-only and do not capture pointer events. */}
             <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/60 via-black/25 to-transparent" />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-[42%] bg-gradient-to-t from-cyan-500/20 via-black/25 to-transparent" />
 
+            {/* Foreground metadata layer is pointer-events-none so only opt-in children stay interactive. */}
             <div className="relative z-10 flex h-full w-full items-end px-5 pb-8 md:px-8 md:pb-10 pointer-events-none">
               <div className="w-full max-w-xl">
                 <div className="flex flex-col gap-4 md:gap-5 animate-in fade-in slide-in-from-bottom-8 duration-500">
