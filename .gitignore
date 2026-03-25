@@ -30,6 +30,7 @@ Thumbs.db
 *.png
 
 # Ignore data dumps and scripts
+ai_dump_chunks/
 chunk_*.txt
 frontend_review_chunk.txt
 master_dump.txt
