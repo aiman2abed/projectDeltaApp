@@ -28,3 +28,8 @@ Thumbs.db
 
 #logo
 *.png
+
+ai_dump_chunks/chunk_00.txt
+ai_dump_chunks/frontend_review_chunk.txt
+ai_dump_chunks/master_dump.txt
+dump_project.sh

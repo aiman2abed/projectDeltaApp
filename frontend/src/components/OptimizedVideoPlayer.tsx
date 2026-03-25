@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, type ReactNode } from "react";
 
 type ReelAspect = "portrait" | "square" | "landscape";
 type ReelFit = "cover" | "contain";
@@ -8,11 +8,12 @@ interface OptimizedVideoPlayerProps {
   url: string;
   aspect?: ReelAspect;
   fit?: ReelFit;
-  isActive?: boolean;     
+  isActive?: boolean;
   shouldMount?: boolean;
-  mode?: "feed" | "focus"; 
-  isGlobalMuted?: boolean; 
+  mode?: "feed" | "focus";
+  isGlobalMuted?: boolean;
   onToggleMute?: () => void;
+  feedActionSlot?: ReactNode;
 }
 
 const getYouTubeEmbedId = (url: string): string => {
@@ -32,11 +33,19 @@ const getYouTubeEmbedId = (url: string): string => {
 
 const buildYouTubeUrl = (url: string, mode: "feed" | "focus"): string => {
   const videoId = getYouTubeEmbedId(url);
+
   if (mode === "focus") {
     return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1`;
   }
+
   return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=0&mute=1&controls=0&loop=1&playlist=${videoId}&playsinline=1&modestbranding=1&rel=0`;
 };
+
+const railButtonClassName =
+  "flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-black/30 backdrop-blur-md shadow-lg shadow-black/20 transition-all duration-300 hover:scale-105 hover:bg-black/45";
+
+const railLabelClassName =
+  "text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-200/90";
 
 export default function OptimizedVideoPlayer({
   url,
@@ -46,16 +55,22 @@ export default function OptimizedVideoPlayer({
   shouldMount = true,
   mode = "focus",
   isGlobalMuted,
-  onToggleMute
+  onToggleMute,
+  feedActionSlot,
 }: OptimizedVideoPlayerProps) {
-  
   const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
   const isFeed = mode === "feed";
-  
+
+  // Local play state belongs to each reel.
+  // When a new reel becomes active, it should autoplay independently.
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // Local mute state is used in non-feed contexts.
+  // In the feed, mute can be controlled globally by DiscoverPage.
   const [localMuted, setLocalMuted] = useState(isFeed);
 
-  // 🛡️ Determine the source of truth for the mute state
+  // In feed mode, the parent page can override mute globally.
+  // Outside the feed, the player uses its own local mute state.
   const currentlyMuted = isFeed && isGlobalMuted !== undefined ? isGlobalMuted : localMuted;
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -71,7 +86,6 @@ export default function OptimizedVideoPlayer({
     }
   }, []);
 
-  // 1. Play/Pause based on scroll
   useEffect(() => {
     if (!isFeed) return;
 
@@ -79,35 +93,37 @@ export default function OptimizedVideoPlayer({
       clearTimeout(playTimerRef.current);
       playTimerRef.current = null;
     }
-    
+
     if (isActive) {
-      setTimeout(() => setIsPlaying(true), 0); // 🛡️ DEFERRED UPDATE
+      setTimeout(() => setIsPlaying(true), 0);
+
+      // Slight delay so the embedded media is ready before receiving commands.
       playTimerRef.current = setTimeout(() => {
         if (isYouTube) {
-           sendYTCmd("playVideo");
-           // Ensure it starts with the correct mute state
-           sendYTCmd(currentlyMuted ? "mute" : "unMute");
+          sendYTCmd("playVideo");
+          sendYTCmd(currentlyMuted ? "mute" : "unMute");
         } else if (videoRef.current) {
-           videoRef.current.muted = currentlyMuted;
-           void videoRef.current.play().catch(() => {});
+          videoRef.current.muted = currentlyMuted;
+          void videoRef.current.play().catch(() => {});
         }
-      }, 200);//2ms delay to ensure the video is ready before sending commands
+      }, 200);
     } else {
-      setTimeout(() => setIsPlaying(false), 0); // 🛡️ DEFERRED UPDATE
+      setTimeout(() => setIsPlaying(false), 0);
+
       if (isYouTube) sendYTCmd("pauseVideo");
       else if (videoRef.current) videoRef.current.pause();
     }
+
     return () => {
       if (playTimerRef.current) {
         clearTimeout(playTimerRef.current);
         playTimerRef.current = null;
       }
     };
-  }, [isActive, isYouTube, sendYTCmd, isFeed, currentlyMuted]); 
+  }, [isActive, isYouTube, sendYTCmd, isFeed, currentlyMuted]);
 
-  // 2. 🛡️ NEW: Instantly react to mute toggles while the video is playing
   useEffect(() => {
-    if (!isActive) return; // Only send commands to the active video
+    if (!isActive) return;
 
     if (isYouTube) {
       sendYTCmd(currentlyMuted ? "mute" : "unMute");
@@ -117,26 +133,37 @@ export default function OptimizedVideoPlayer({
   }, [currentlyMuted, isActive, isYouTube, sendYTCmd]);
 
   const togglePlay = (e: React.MouseEvent) => {
+    // Prevent the click from bubbling into the reel surface.
     e.stopPropagation();
+
+    // This button controls the current reel's play state only.
     if (isYouTube) {
       sendYTCmd(isPlaying ? "pauseVideo" : "playVideo");
     } else if (videoRef.current) {
       if (isPlaying) videoRef.current.pause();
       else void videoRef.current.play().catch(() => {});
     }
+
     setIsPlaying((prev) => !prev);
   };
 
   const handleMuteToggle = (e: React.MouseEvent) => {
+    // Prevent the click from bubbling into the reel surface.
     e.stopPropagation();
+
+    // In feed mode this delegates mute changes up to DiscoverPage,
+    // which updates the shared mute state for all reels.
     if (isFeed && onToggleMute) {
-      onToggleMute(); // Flips the global state in DiscoverPage
+      onToggleMute();
     } else {
-      setLocalMuted(!localMuted); // Flips the local state in LessonPage
+      // Outside the feed, the player controls its own mute state.
+      setLocalMuted((prev) => !prev);
     }
   };
 
   if (!shouldMount) {
+    // Placeholder layer for off-screen reels:
+    // occupies the reel's background area without loading active media.
     return <div className="absolute inset-0 z-0 bg-[#0B0F19] pointer-events-none" />;
   }
 
@@ -144,18 +171,35 @@ export default function OptimizedVideoPlayer({
 
   if (mode === "focus") {
     return (
-      <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-inner border border-white/10 group">
+      // Focus-mode player wrapper:
+      // controls the standard lesson-page video box, not the full-screen reel.
+      <div className="relative w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black shadow-inner group">
         {isYouTube ? (
-          <iframe src={ytUrl} className="absolute top-0 left-0 w-full h-full" allow="autoplay; encrypted-media; fullscreen" allowFullScreen />
+          <iframe
+            src={ytUrl}
+            className="absolute left-0 top-0 h-full w-full"
+            allow="autoplay; encrypted-media; fullscreen"
+            allowFullScreen
+          />
         ) : (
-          <video src={url} controls className="w-full h-full object-contain" />
+          <video src={url} controls className="h-full w-full object-contain" />
         )}
       </div>
     );
   }
 
-  const aspectClassMap: Record<ReelAspect, string> = { portrait: "aspect-[9/16]", square: "aspect-square", landscape: "aspect-video" };
-  const frameWidthMap: Record<ReelAspect, string> = { portrait: "max-w-sm", square: "max-w-8xl", landscape: "max-w-12xl" };
+  const aspectClassMap: Record<ReelAspect, string> = {
+    portrait: "aspect-[9/16]",
+    square: "aspect-square",
+    landscape: "aspect-video",
+  };
+
+  const frameWidthMap: Record<ReelAspect, string> = {
+    portrait: "max-w-sm",
+    square: "max-w-4xl",
+    landscape: "max-w-5xl",
+  };
+
   const ytScaleMap: Record<ReelAspect, Record<ReelFit, string>> = {
     portrait: { cover: "w-[120%] h-[120%]", contain: "w-[100%] h-[100%]" },
     square: { cover: "w-[112%] h-[112%]", contain: "w-[100%] h-[100%]" },
@@ -163,33 +207,94 @@ export default function OptimizedVideoPlayer({
   };
 
   return (
-    <div className="absolute inset-0 z-0 bg-[#0B0F19] overflow-hidden pointer-events-none">
-      <div className="absolute inset-0 z-0 pointer-events-none">
+    // Full-screen reel media layer:
+    // fills the reel section and acts as the base visual layer under text overlays.
+    <div className="absolute inset-0 z-0 overflow-hidden bg-[#0B0F19]">
+      {/* Background ambience layer:
+          fills the entire reel screen behind the main framed video.
+          Controls blurred video/glow and overall cinematic darkening. */}
+      <div className="pointer-events-none absolute inset-0 z-0">
         {isYouTube ? (
+          // Radial glow behind YouTube reels, affecting the whole reel background.
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.18),transparent_65%)] opacity-70" />
         ) : (
-          <video src={url} loop muted playsInline className="w-full h-full object-cover opacity-20 blur-3xl scale-125 pointer-events-none" />
+          // Blurred full-screen background clone for direct video reels.
+          <video
+            src={url}
+            loop
+            muted
+            playsInline
+            className="pointer-events-none h-full w-full scale-125 object-cover opacity-20 blur-3xl"
+          />
         )}
+
+        {/* Global darkening wash over the whole reel background */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
       </div>
 
-      <div className={`absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-full px-6 z-10 pointer-events-auto ${frameWidthMap[aspect]}`}>
-        <div className={`w-full ${aspectClassMap[aspect]} rounded-2xl overflow-hidden border border-sky-500/20 shadow-[0_0_50px_rgba(56,189,248,0.15)] bg-black/80 relative backdrop-blur-md`}>
+      {/* Main centered media frame:
+          controls the actual visible reel frame in the middle of the screen.
+          Its width changes with portrait/square/landscape aspect. */}
+      <div
+        className={`absolute left-1/2 top-[45%] z-10 w-full -translate-x-1/2 -translate-y-1/2 px-6 pointer-events-auto ${frameWidthMap[aspect]}`}
+      >
+        {/* Framed video box:
+            controls the bordered, rounded, glowing card that contains the reel media itself. */}
+        <div
+          className={`relative w-full overflow-hidden rounded-2xl border border-sky-500/20 bg-black/80 shadow-[0_0_50px_rgba(56,189,248,0.15)] backdrop-blur-md ${aspectClassMap[aspect]}`}
+        >
           {isYouTube ? (
-            <iframe ref={iframeRef} src={ytUrl} title="Spirelay reel video player" loading="lazy" className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none ${ytScaleMap[aspect][fit]}`} allow="autoplay; encrypted-media" />
+            // YouTube iframe positioned inside the centered media frame.
+            // This controls only the video content area, not the whole screen.
+            <iframe
+              ref={iframeRef}
+              src={ytUrl}
+              title="Spirelay reel video player"
+              loading="lazy"
+              className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${ytScaleMap[aspect][fit]}`}
+              allow="autoplay; encrypted-media"
+            />
           ) : (
-            <video ref={videoRef} src={url} loop muted playsInline className={`w-full h-full ${fit === "cover" ? "object-cover" : "object-contain"} pointer-events-none`} />
+            // Native video element inside the centered media frame.
+            <video
+              ref={videoRef}
+              src={url}
+              loop
+              muted
+              playsInline
+              className={`pointer-events-none h-full w-full ${fit === "cover" ? "object-cover" : "object-contain"}`}
+            />
           )}
         </div>
       </div>
 
-      <div className="absolute left-6 bottom-40 z-30 flex flex-col gap-3 pointer-events-auto">
-        <button onClick={handleMuteToggle} className="w-12 h-12 rounded-full glass-panel flex items-center justify-center hover:bg-white/10 transition-colors border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:scale-110">
-          <span className="text-xl">{currentlyMuted ? "🔇" : "🔊"}</span>
+      {/* Right-side action rail:
+          controls the vertical stack of reel actions on the lower-right side of the screen.
+          This is where mute, play/pause, and injected lesson actions appear. */}
+      <div className="absolute right-4 bottom-28 z-[40] flex flex-col items-center gap-4 pointer-events-auto md:right-6 md:bottom-32">
+        <button onClick={handleMuteToggle} className="group flex flex-col items-center gap-2">
+          {/* Circular mute/unmute control button in the action rail */}
+          <div className={railButtonClassName}>
+            <span className="text-xl">{currentlyMuted ? "🔇" : "🔊"}</span>
+          </div>
+
+          {/* Label under the mute button */}
+          <span className={railLabelClassName}>Audio</span>
         </button>
-        <button onClick={togglePlay} className="w-12 h-12 rounded-full glass-panel flex items-center justify-center hover:bg-white/10 transition-colors border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:scale-110">
-          <span className="text-xl">{isPlaying ? "⏸️" : "▶️"}</span>
+
+        <button onClick={togglePlay} className="group flex flex-col items-center gap-2">
+          {/* Circular play/pause control button in the action rail */}
+          <div className={railButtonClassName}>
+            <span className="text-xl">{isPlaying ? "⏸️" : "▶️"}</span>
+          </div>
+
+          {/* Label under the play/pause button */}
+          <span className={railLabelClassName}>{isPlaying ? "Pause" : "Play"}</span>
         </button>
+
+        {/* Extra injected action slot from DiscoverPage.
+            Currently used for the Inject button, so it appears in the same vertical rail. */}
+        {feedActionSlot}
       </div>
     </div>
   );
