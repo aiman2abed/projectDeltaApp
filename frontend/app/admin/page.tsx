@@ -222,18 +222,39 @@ export default function AdminPage() {
     }
   };
 
+  // 🛡️ NEW: Wipe User Progress Handler
+  const handleWipeProgress = async (userId: string, userEmail: string) => {
+    if (!confirm(`CRITICAL WARNING: This will completely erase all SM-2 learning telemetry and mastery progress for ${userEmail}. Their account and role will remain intact. Proceed?`)) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    try {
+      // You will need to implement this endpoint on your FastAPI backend
+      const res = await fetch(`http://localhost:8000/api/admin/users/${userId}/progress`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      
+      if (res.ok) {
+        alert(`Telemetry successfully wiped for ${userEmail}.`);
+      } else {
+        alert(`Failed to wipe telemetry for ${userEmail}. Check backend logs.`);
+      }
+    } catch (err) {
+      console.error("Progress wipe failed", err);
+    }
+  };
+
   const executeSanction = async () => {
     setIsBanning(true);
     const { data: { session } } = await supabase.auth.getSession();
     
     try {
-      // Simulate API call - In a real backend, you'd have /api/users/{id}/ban or DELETE /api/users/{id}
       if (banAction === "delete" && session) {
-         // Example Delete Fetch (Requires backend endpoint)
          // await fetch(`http://localhost:8000/api/users/${banModal.userId}`, { method: "DELETE", ... })
          setUsers(users.filter(u => u.id !== banModal.userId));
       } else {
-         // Example Status Update Fetch (Temp/Perma ban)
          alert(`User ${banModal.userEmail} has received a ${banAction} ban.`);
       }
       
@@ -270,7 +291,6 @@ export default function AdminPage() {
             </div>
 
             <div className="flex flex-col gap-4 relative z-10">
-              {/* LESSON ONLY: Module Selector */}
               {modal.mode === "new_lesson" && (
                 <div>
                   <label className="block text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-2">Target Module Node</label>
@@ -285,7 +305,6 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* COMMON: Title */}
               <div>
                 <label className="block text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-2">Title / Designation</label>
                 <input 
@@ -297,7 +316,6 @@ export default function AdminPage() {
                 />
               </div>
 
-              {/* MODULE ONLY: Description */}
               {(modal.mode === "new_module" || modal.mode === "edit_module") && (
                 <div>
                   <label className="block text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-2">Description</label>
@@ -310,7 +328,6 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* LESSON ONLY: Content, Math, Video */}
               {modal.mode === "new_lesson" && (
                 <>
                   <div>
@@ -416,7 +433,7 @@ export default function AdminPage() {
       )}
 
       {/* Header & Global Actions */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mt-8">
         <div>
           <p className="text-sm font-bold tracking-[0.2em] text-red-400 uppercase mb-1 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
@@ -528,6 +545,14 @@ export default function AdminPage() {
                     </span>
                   </td>
                   <td className="p-4 flex justify-end gap-2">
+                    {/* 🛡️ NEW: Wipe Progress Button */}
+                    <button 
+                      onClick={() => handleWipeProgress(user.id, user.email)} 
+                      className="p-2 text-amber-500 hover:text-amber-400 transition-colors rounded-lg hover:bg-amber-500/10"
+                      title="Erase all SM-2 progress for this user"
+                    >
+                      Wipe Progress
+                    </button>
                     <button 
                       onClick={() => handleManageUser(user.id, user.role)} 
                       className="p-2 text-slate-400 hover:text-sky-400 transition-colors rounded-lg hover:bg-sky-500/10"

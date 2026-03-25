@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import VideoPlayer from "@/components/VideoPlayer";
+import OptimizedVideoPlayer from "@/components/OptimizedVideoPlayer"; // 🛡️ IMPORT NEW PLAYER
 import QuizEngine from "@/components/QuizEngine";
 import MathRenderer from "@/components/MathRenderer";
-import type { Lesson, ProgressUpdateRequest, ProgressUpdateResponse } from "@/types/api";
+import type { Lesson, ProgressUpdateRequest } from "@/types/api";
 import { createClient } from "@/lib/supabase";
 
 export default function LessonPage() {
@@ -74,8 +74,9 @@ export default function LessonPage() {
       </div>
 
       {lesson.video_url && (
-        <div className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-          <VideoPlayer url={lesson.video_url} />
+        <div className="rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+           {/* 🛡️ REPLACED WITH NEW COMPONENT IN FOCUS MODE */}
+          <OptimizedVideoPlayer url={lesson.video_url} mode="focus" />
         </div>
       )}
 

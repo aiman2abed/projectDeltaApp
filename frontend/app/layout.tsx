@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Navbar from "@/components/Navbar";
 import "./globals.css";
+import AuthGuard from "@/components/AuthGuard";
 
 export const metadata: Metadata = {
   title: "Spirelay | Engineering Mastery",
@@ -18,15 +19,15 @@ export default function RootLayout({
         
         {/* Subtle radial gradient to act as a "light source" behind the grid */}
         <div className="fixed inset-0 z-[-1] bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(56,189,248,0.15),rgba(255,255,255,0))]" />
+        <AuthGuard>
+          {/* Smart Global Navigation Bar */}
+          <Navbar />
 
-        {/* Smart Global Navigation Bar */}
-        <Navbar />
-
-        {/* Main Content Wrapper with Max-Width and Responsive Edge Padding */}
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8 md:py-12 flex flex-col relative">
-          {children}
-        </main>
-
+          {/* Main Content Wrapper with Max-Width and Responsive Edge Padding */}
+          <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8 md:py-12 flex flex-col relative">
+            {children}
+          </main>
+        </AuthGuard>
       </body>
     </html>
   );
