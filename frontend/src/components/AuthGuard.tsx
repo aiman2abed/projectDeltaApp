@@ -24,9 +24,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       const isGuestOnly = GUEST_ONLY_ROUTES.includes(pathname);
 
       if (!session && !isPublicRoute) {
+        setIsAuthorized(false);
         // Intruder detected on a private route -> Bounce to login
         router.push("/login");
       } else if (session && isGuestOnly) {
+        setIsAuthorized(false);
         // Logged-in user trying to access login/signup -> Bounce to dashboard
         router.push("/");
       } else {
@@ -43,15 +45,31 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       const isGuestOnly = GUEST_ONLY_ROUTES.includes(pathname);
       
       if (!session && !isPublicRoute) {
+        setIsAuthorized(false);
         router.push("/login");
       } else if (session && isGuestOnly) {
+        setIsAuthorized(false);
         router.push("/");
       } else {
         setIsAuthorized(true);
       }
     });
 
+    const handleVisibilityOrFocus = () => {
+      void checkSecurityClearance();
+    };
+
+    const recheckInterval = window.setInterval(() => {
+      void checkSecurityClearance();
+    }, 1500);
+
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
     return () => {
+      window.clearInterval(recheckInterval);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
       authListener.subscription.unsubscribe();
     };
   }, [pathname, router, supabase.auth]);

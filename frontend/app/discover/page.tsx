@@ -61,11 +61,22 @@ export default function DiscoverPage() {
   }, [supabase]);
 
   useEffect(() => {
+    if (lessons.length === 0) {
+      setActiveReelIndex(0);
+      return;
+    }
+    if (activeReelIndex > lessons.length - 1) {
+      setActiveReelIndex(lessons.length - 1);
+    }
+  }, [activeReelIndex, lessons]);
+
+  useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
+    observerRef.current?.disconnect();
     const sections = Array.from(container.querySelectorAll<HTMLElement>("[data-index]"));
-    observerRef.current = new IntersectionObserver(
+    const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
@@ -76,14 +87,15 @@ export default function DiscoverPage() {
       },
       { threshold: 0.6 }
     );
+    observerRef.current = observer;
 
-    sections.forEach((section) => observerRef.current?.observe(section));
+    sections.forEach((section) => observer.observe(section));
 
     return () => {
-      sections.forEach((section) => observerRef.current?.unobserve(section));
-      observerRef.current?.disconnect();
+      sections.forEach((section) => observer.unobserve(section));
+      observer.disconnect();
     };
-  }, [lessons.length]);
+  }, [lessons]);
 
   const handleInject = async (lessonId: number) => {
     const { data: { session } } = await supabase.auth.getSession();

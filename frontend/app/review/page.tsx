@@ -6,8 +6,19 @@ import { createClient } from "@/lib/supabase";
 import MathRenderer from "@/components/MathRenderer";
 import QuizEngine from "@/components/QuizEngine";
 
+type ReviewLesson = {
+  id: number;
+  module_id: number;
+  title: string;
+  content_text: string;
+  content_math?: string | null;
+  quiz_question?: string | null;
+  quiz_options?: string[] | null;
+  correct_answer?: string | null;
+};
+
 export default function ReviewPage() {
-  const [queue, setQueue] = useState<any[]>([]);
+  const [queue, setQueue] = useState<ReviewLesson[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   
   // States for the active card's interaction mode
