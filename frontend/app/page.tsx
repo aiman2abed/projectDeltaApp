@@ -4,25 +4,25 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import type { ModuleProgressSummary } from "@/types/api";
 
 export default function Dashboard() {
-  const [stats, setStats] = useState<any[]>([]);
+  const [stats, setStats] = useState<ModuleProgressSummary[]>([]);
   const [dueCount, setDueCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState("Engineer"); // State for personalized greeting
+  const [userName, setUserName] = useState("Engineer");
   const router = useRouter();
 
-useEffect(() => {
+  useEffect(() => {
     const fetchTelemetry = async () => {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Extract the exact first name from the user metadata
       if (session.user?.user_metadata?.first_name) {
         setUserName(session.user.user_metadata.first_name);
       } else if (session.user?.email) {
-        setUserName(session.user.email.split('@')[0]); // Fallback
+        setUserName(session.user.email.split('@')[0]);
       }
 
       const headers = { Authorization: `Bearer ${session.access_token}` };
@@ -48,12 +48,10 @@ useEffect(() => {
     fetchTelemetry();
   }, []);
 
-  // Find the module with the lowest mastery score (needs the most review), or highest if none are low.
   const priorityModule = stats.length > 0 
     ? stats.reduce((prev, current) => (prev.mastery_score < current.mastery_score) ? prev : current)
     : null;
 
-  // Calculate average retention
   const avgRetention = stats.length > 0 
     ? Math.round(stats.reduce((acc, curr) => acc + curr.mastery_score, 0) / stats.length) 
     : 0;
@@ -94,7 +92,6 @@ useEffect(() => {
 
       {/* Top Level Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Memory Retention (Live) */}
         <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2 hover:border-sky-500/30 transition-colors group">
           <div className="flex items-center gap-3 text-slate-400 group-hover:text-sky-400 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012-2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
@@ -106,7 +103,6 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Modules Count (Live) */}
         <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2 hover:border-sky-500/30 transition-colors group">
           <div className="flex items-center gap-3 text-slate-400 group-hover:text-amber-400 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /></svg>
@@ -118,7 +114,6 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Pending Reviews (Live) */}
         <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2 hover:border-sky-500/30 transition-colors group">
           <div className="flex items-center gap-3 text-slate-400 group-hover:text-red-400 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -205,7 +200,7 @@ useEffect(() => {
                       />
                     </div>
                   </Link>
-                ))}
+                 ))}
               </div>
             )}
           </div>

@@ -39,14 +39,17 @@ export default function SettingsPage() {
 
     fetchUserData();
 
-    // Load settings from local storage
+    // Load settings from local storage safely
     const savedLimit = localStorage.getItem("spirelay_dailyLimit");
     const savedStrict = localStorage.getItem("spirelay_strictMode");
     const savedNotifs = localStorage.getItem("spirelay_notifications");
 
-    if (savedLimit) setDailyLimit(parseInt(savedLimit));
-    if (savedStrict !== null) setStrictMode(savedStrict === "true");
-    if (savedNotifs !== null) setNotifications(savedNotifs === "true");
+    // 🛡️ DEFERRED UPDATE: Prevents React Strict Mode cascading renders
+    setTimeout(() => {
+      if (savedLimit) setDailyLimit(parseInt(savedLimit));
+      if (savedStrict !== null) setStrictMode(savedStrict === "true");
+      if (savedNotifs !== null) setNotifications(savedNotifs === "true");
+    }, 0);
   }, [router, supabase]);
 
   // --- SETTINGS ACTIONS ---

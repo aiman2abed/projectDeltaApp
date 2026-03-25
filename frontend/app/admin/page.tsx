@@ -458,10 +458,10 @@ export default function AdminPage() {
           </h1>
         </div>
         <div className="flex gap-3">
-          <button onClick={openNewLesson} className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-300 bg-slate-800 border border-white/10 hover:bg-slate-700 transition-colors hidden md:block">
+          <button onClick={() => openNewLesson()} className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-300 bg-slate-800 border border-white/10 hover:bg-slate-700 transition-colors hidden md:block">
             + Quick Lesson
           </button>
-          <button onClick={openNewModule} className="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-all hover:-translate-y-0.5">
+          <button onClick={() => openNewModule()} className="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-all hover:-translate-y-0.5">
             + New Module
           </button>
         </div>

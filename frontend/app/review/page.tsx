@@ -191,9 +191,9 @@ export default function ReviewPage() {
         {activeMode === "quiz" && hasQuizData && (
           <div className="animate-in slide-in-from-right-8 duration-500">
              <QuizEngine
-                question={currentLesson.quiz_question}
-                options={currentLesson.quiz_options}
-                correctAnswer={currentLesson.correct_answer}
+                question={currentLesson.quiz_question!}
+                options={currentLesson.quiz_options!}
+                correctAnswer={currentLesson.correct_answer!}
                 onSuccess={handleQuizSuccess} 
               />
               <div className="text-center mt-4">

@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState, useRef, useCallback } from "react";
 
 type ReelAspect = "portrait" | "square" | "landscape";
@@ -10,10 +9,10 @@ interface OptimizedVideoPlayerProps {
   aspect?: ReelAspect;
   fit?: ReelFit;
   isActive?: boolean;     
-  shouldMount?: boolean;  
+  shouldMount?: boolean;
   mode?: "feed" | "focus"; 
   isGlobalMuted?: boolean; 
-  onToggleMute?: () => void; 
+  onToggleMute?: () => void;
 }
 
 const getYouTubeEmbedId = (url: string): string => {
@@ -82,7 +81,7 @@ export default function OptimizedVideoPlayer({
     }
     
     if (isActive) {
-      setIsPlaying(true);
+      setTimeout(() => setIsPlaying(true), 0); // 🛡️ DEFERRED UPDATE
       playTimerRef.current = setTimeout(() => {
         if (isYouTube) {
            sendYTCmd("playVideo");
@@ -94,7 +93,7 @@ export default function OptimizedVideoPlayer({
         }
       }, 200);//2ms delay to ensure the video is ready before sending commands
     } else {
-      setIsPlaying(false);
+      setTimeout(() => setIsPlaying(false), 0); // 🛡️ DEFERRED UPDATE
       if (isYouTube) sendYTCmd("pauseVideo");
       else if (videoRef.current) videoRef.current.pause();
     }
@@ -130,7 +129,6 @@ export default function OptimizedVideoPlayer({
 
   const handleMuteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    
     if (isFeed && onToggleMute) {
       onToggleMute(); // Flips the global state in DiscoverPage
     } else {
