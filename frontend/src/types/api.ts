@@ -17,7 +17,6 @@ export interface Lesson {
 }
 
 export interface ProgressUpdateRequest {
-  user_id: number;
   quality: 0 | 1 | 2 | 3 | 4 | 5;
 }
 

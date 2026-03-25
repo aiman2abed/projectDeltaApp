@@ -1,19 +1,19 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+from typing import List, Optional, Any
 from datetime import date
-from uuid import UUID
-
+import json
 
 # --- USER SCHEMAS ---
 class UserBase(BaseModel):
     email: str
     role: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
 
 class User(UserBase):
-    id: UUID
+    id: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # --- MODULE SCHEMAS ---
 class ModuleBase(BaseModel):
@@ -26,8 +26,7 @@ class ModuleCreate(ModuleBase):
 class ModuleResponse(ModuleBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ModuleUpdate(BaseModel):
     title: Optional[str] = None
@@ -39,21 +38,13 @@ class LessonBase(BaseModel):
     title: str
     content_text: str
     content_math: Optional[str] = None
-    
-    # V2: Micro-Learning Fields
     video_url: Optional[str] = None
     quiz_question: Optional[str] = None
-    quiz_options: Optional[List[str]] = None
+    quiz_options: Optional[Any] = None # Accept any format temporarily for flexible creation
     correct_answer: Optional[str] = None
 
 class LessonCreate(LessonBase):
     pass
-
-class LessonResponse(LessonBase):
-    id: int
-
-    class Config:
-        from_attributes = True
 
 class LessonUpdate(BaseModel):
     title: Optional[str] = None
@@ -61,12 +52,52 @@ class LessonUpdate(BaseModel):
     content_math: Optional[str] = None
     video_url: Optional[str] = None
     quiz_question: Optional[str] = None
-    quiz_options: Optional[List[str]] = None # Or Optional[str] depending on how you store it
+    quiz_options: Optional[Any] = None 
     correct_answer: Optional[str] = None
 
+class LessonResponse(BaseModel):
+    id: int
+    module_id: int
+    title: str
+    content_text: str
+    content_math: Optional[str] = None
+    video_url: Optional[str] = None 
+    quiz_question: Optional[str] = None
+    quiz_options: Optional[List[str]] = None
+    correct_answer: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    # 🛠️ CRITICAL FIX: Convert DB string to List[str] automatically
+    @field_validator('quiz_options', mode='before')
+    @classmethod
+    def parse_quiz_options(cls, v):
+        if isinstance(v, str):
+            # Try to parse it as JSON first
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except Exception:
+                pass
+            
+            # If it's a raw Postgres array like "{Option A, Option B}"
+            if v.startswith("{") and v.endswith("}"):
+                # Strip the brackets
+                cleaned = v[1:-1]
+                # Split by comma. This is a simplified split; 
+                # for robust parsing, JSON storage in DB is highly recommended.
+                # Here we strip extra quotes just in case.
+                items = [item.strip(' "') for item in cleaned.split(',')]
+                return items
+                
+            return [v] # Fallback: return the raw string as a single item list
+            
+        return v
+
+# --- PROGRESS SCHEMAS ---
 class ProgressUpdateRequest(BaseModel):
-    user_id: str
-    quality: int = Field(ge=0, le=5)
+    quality: int = Field(..., ge=0, le=5) 
 
 class ProgressUpdateResponse(BaseModel):
     status: str
@@ -76,7 +107,6 @@ class ProgressUpdateResponse(BaseModel):
     repetitions: int
     ease_factor: float
 
-# --- USER PROGRESS SCHEMAS ---
 class UserProgressBase(BaseModel):
     user_id: str
     lesson_id: int
@@ -91,8 +121,7 @@ class UserProgressCreate(UserProgressBase):
 class UserProgress(UserProgressBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ModuleProgressSummary(BaseModel):
     module_id: int
@@ -101,5 +130,4 @@ class ModuleProgressSummary(BaseModel):
     lessons_started : int
     mastery_score : float
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

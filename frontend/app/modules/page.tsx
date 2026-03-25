@@ -2,80 +2,82 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
-interface Module {
+type Module = {
   id: number;
   title: string;
-  description: string;
-}
+  description?: string | null;
+};
 
 export default function ModulesPage() {
+  // Page owns full module catalog state and local search filtering state.
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState("");
   const supabase = createClient();
 
   useEffect(() => {
+    // Synchronizes visible module cards with backend data for the current session.
     const fetchModules = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        router.push("/login");
-        return;
-      }
-
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/modules", {
-          headers: {
-            "Authorization": `Bearer ${session.access_token}`,
-            "Content-Type": "application/json"
-          }
-        });
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setModules([]);
+          return;
+        }
 
-        if (!res.ok) throw new Error("Network response was not ok");
-        const data = await res.json();
+        const response = await fetch("http://localhost:8000/api/modules", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        const data = await response.json();
         setModules(data);
-      } catch (error) {
-        console.error("Error fetching modules:", error);
+      } catch (err) {
+        console.error("Failed to fetch modules:", err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchModules();
-  }, [router, supabase]);
+  }, [supabase]);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center mt-20 text-blue-900 font-bold text-xl animate-pulse">
-        Authenticating & Loading Tracks...
-      </div>
-    );
-  }
+  const filteredModules = modules.filter(mod => 
+    mod.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    mod.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (loading) return <div className="p-10 text-sky-400 font-mono animate-pulse">SYNCING ARCHIVES...</div>;
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-6">
-      <h1 className="text-3xl font-extrabold text-gray-900 mb-6">Engineering Tracks</h1>
-      
-      {modules.length === 0 ? (
-        <p className="text-gray-500">No modules found. Is the backend running?</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {modules.map((mod) => (
-            <div key={mod.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
-              <h2 className="text-xl font-bold text-blue-900 mb-2">{mod.title}</h2>
-              <p className="text-gray-600 mb-4 h-20 overflow-hidden text-sm">{mod.description}</p>
-              <Link href={`/lessons/${mod.id}`}>
-                <button className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition cursor-pointer shadow-sm">
-                  View Lessons
-                </button>
-              </Link>
-            </div>
-          ))}
+    // Screen ownership: header/search controls on top, module card grid in the content region.
+    <div className="w-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <p className="text-sm font-bold tracking-[0.2em] text-sky-400 uppercase mb-1">Curriculum</p>
+          <h1 className="text-4xl font-extrabold text-white tracking-tight">Learning Modules</h1>
         </div>
-      )}
+        <input
+          type="text"
+          placeholder="Search topics..."
+          className="w-full md:w-96 px-4 py-2 bg-slate-800/50 border border-white/10 text-white rounded-xl focus:ring-2 focus:ring-sky-400/40 outline-none"
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredModules.map((mod) => (
+          <Link href={`/modules/${mod.id}`} key={mod.id} className="block group">
+            <div className="glass-panel p-6 rounded-2xl h-full flex flex-col hover:-translate-y-1 transition-all border-white/5 hover:border-sky-500/30">
+              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-sky-300">{mod.title}</h3>
+              <p className="text-sm text-slate-400 line-clamp-3">{mod.description}</p>
+              <div className="mt-auto pt-4 flex justify-between items-center text-[10px] font-bold text-sky-400 uppercase tracking-widest">
+                <span>Database Node: {mod.id}</span>
+                <span>Enter Module →</span>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

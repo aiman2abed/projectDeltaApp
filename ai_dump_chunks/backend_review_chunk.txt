@@ -1,0 +1,1499 @@
+==================== BACKEND REVIEW CHUNK ====================
+This file intentionally repeats selected backend files for focused code review.
+
+==================== BACKEND TREE ====================
+./backend
+./backend/.DS_Store
+./backend/.env
+./backend/.env.example
+./backend/.gitignore
+./backend/__pycache__
+./backend/__pycache__/auth.cpython-312.pyc
+./backend/__pycache__/database.cpython-312.pyc
+./backend/__pycache__/main.cpython-312.pyc
+./backend/__pycache__/models.cpython-312.pyc
+./backend/__pycache__/schemas.cpython-312.pyc
+./backend/auth.py
+./backend/database.py
+./backend/ee_curriculum.json
+./backend/main.py
+./backend/models.py
+./backend/requirements.txt
+./backend/reset_db.py
+./backend/schema.sql
+./backend/schemas.py
+./backend/seed_json.py
+./backend/test_srs.py
+./backend/venv
+./backend/venv/bin
+./backend/venv/include
+./backend/venv/lib
+./backend/venv/pyvenv.cfg
+
+==================== BACKEND FILE CONTENTS ====================
+
+
+==================== FILE: ./backend/ee_curriculum.json ====================
+
+[
+  {
+    "id": 1,
+    "module_id": 1,
+    "module_title": "Digital VLSI Design & Arithmetic Circuits",
+    "module_description": "Foundations of integrated circuit design, covering fast adder architectures, CMOS logic behavior, and SRAM memory stability.",
+    "title": "Adder Architectures & Carry-Lookahead",
+    "content_text": "CLA units calculate carries in parallel using Generate (G) and Propagate (P) signals to bypass O(n) ripple delay.",
+    "content_math": "C_{i+1} = G_i + (P_i \\cdot C_i)",
+    "video_url": "https://www.youtube.com/embed/SQKdnxysXnw",
+    "quiz_question": "What is the primary advantage of a Carry-Lookahead Adder (CLA)?",
+    "quiz_options": ["Fewer gates", "Parallel carry calculation reduces delay", "Lower power", "Eliminates XOR"],
+    "correct_answer": "Parallel carry calculation reduces delay"
+  },
+  {
+    "id": 2,
+    "module_id": 1,
+    "module_title": "Digital VLSI Design & Arithmetic Circuits",
+    "module_description": "Foundations of integrated circuit design, covering fast adder architectures, CMOS logic behavior, and SRAM memory stability.",
+    "title": "CMOS Inverter Basics",
+    "content_text": "The CMOS inverter pairs a pMOS pull-up network with an nMOS pull-down network. It features high noise immunity and near-zero static power.",
+    "content_math": "I_{Dn} = I_{Dp}\\ \\text{at switching threshold}",
+    "video_url": "https://www.youtube.com/embed/0cg5kA1Ycok",
+    "quiz_question": "Why does an ideal CMOS inverter draw nearly zero static current at logic 0 and 1?",
+    "quiz_options": ["One transistor is off in each state", "Both transistors are always off", "Output capacitor removes current", "Currents cancel exactly"],
+    "correct_answer": "One transistor is off in each state"
+  },
+  {
+    "id": 3,
+    "module_id": 1,
+    "module_title": "Digital VLSI Design & Arithmetic Circuits",
+    "module_description": "Foundations of integrated circuit design, covering fast adder architectures, CMOS logic behavior, and SRAM memory stability.",
+    "title": "Voltage Transfer Curve and Noise Margins",
+    "content_text": "The VTC shows output changes as input sweeps from 0 to V_DD. Noise margins quantify the disturbance a gate can tolerate.",
+    "content_math": "NM_H = V_{OH} - V_{IH},\\quad NM_L = V_{IL} - V_{OL}",
+    "video_url": "https://www.youtube.com/embed/9uUWqmj7xzU",
+    "quiz_question": "What does a larger noise margin imply in digital CMOS logic?",
+    "quiz_options": ["Higher disturbance tolerance", "Slower switching", "Lower supply voltage", "Dynamic logic"],
+    "correct_answer": "Higher disturbance tolerance"
+  },
+  {
+    "id": 4,
+    "module_id": 1,
+    "module_title": "Digital VLSI Design & Arithmetic Circuits",
+    "module_description": "Foundations of integrated circuit design, covering fast adder architectures, CMOS logic behavior, and SRAM memory stability.",
+    "title": "Transmission Gates and Pass Logic",
+    "content_text": "A transmission gate uses parallel nMOS and pMOS devices to pass both logic 0 and 1 faithfully across the full voltage range.",
+    "content_math": "R_{on} \\approx R_n \\parallel R_p",
+    "video_url": "https://www.youtube.com/embed/y0MmcWiBy2U",
+    "quiz_question": "Why is a CMOS transmission gate better than a lone nMOS pass transistor?",
+    "quiz_options": ["Passes strong 0s and 1s effectively", "Needs no control signals", "No leakage", "Zero dynamic power"],
+    "correct_answer": "Passes strong 0s and 1s effectively"
+  },
+  {
+    "id": 5,
+    "module_id": 1,
+    "module_title": "Digital VLSI Design & Arithmetic Circuits",
+    "module_description": "Foundations of integrated circuit design, covering fast adder architectures, CMOS logic behavior, and SRAM memory stability.",
+    "title": "6T SRAM Bitcell Operation",
+    "content_text": "A standard 6T SRAM cell uses cross-coupled inverters for storage and two access transistors for bitline connection.",
+    "content_math": "Q = \\overline{QB}",
+    "video_url": "https://www.youtube.com/embed/qr9tJlktp2M",
+    "quiz_question": "What is the role of access transistors in a 6T SRAM cell?",
+    "quiz_options": ["Connect storage to bitlines during wordline assertion", "Precharge bitlines", "Replace inverters in hold mode", "Refresh the bit"],
+    "correct_answer": "Connect storage to bitlines during wordline assertion"
+  },
+  {
+    "id": 6,
+    "module_id": 1,
+    "module_title": "Digital VLSI Design & Arithmetic Circuits",
+    "module_description": "Foundations of integrated circuit design, covering fast adder architectures, CMOS logic behavior, and SRAM memory stability.",
+    "title": "SRAM Read Stability and Cell Ratio",
+    "content_text": "Read stability depends on the size balance between pull-down and access transistors to prevent bit corruption.",
+    "content_math": "CR = \\frac{(W/L)_{pull-down}}{(W/L)_{access}}",
+    "video_url": "https://www.youtube.com/embed/8KGnbKaf-OQ",
+    "quiz_question": "Why is a large cell ratio important in 6T SRAM during a read?",
+    "quiz_options": ["Prevents access transistor from disturbing stored 0", "Zero standby leakage", "No bitline precharge", "Makes write easier"],
+    "correct_answer": "Prevents access transistor from disturbing stored 0"
+  },
+  {
+    "id": 7,
+    "module_id": 2,
+    "module_title": "High-Voltage & Power Electronics",
+    "module_description": "Exploration of dielectric breakdown and the building blocks of power conversion including rectifiers and DC-DC stages.",
+    "title": "Dielectric Breakdown",
+    "content_text": "Breakdown occurs when the electric field exceeds dielectric strength. Paschen's Law relates voltage to pressure and distance.",
+    "content_math": "E = V/d",
+    "video_url": "https://www.youtube.com/embed/gpRA6aANfCE",
+    "quiz_question": "What happens to the dielectric strength of air as the gap decreases?",
+    "quiz_options": ["Increases", "Decreases", "Stays constant", "Becomes zero"],
+    "correct_answer": "Increases"
+  },
+  {
+    "id": 8,
+    "module_id": 2,
+    "module_title": "High-Voltage & Power Electronics",
+    "module_description": "Exploration of dielectric breakdown and the building blocks of power conversion including rectifiers and DC-DC stages.",
+    "title": "Single-Phase Full-Wave Rectifiers",
+    "content_text": "Full-wave rectifiers use both halves of the AC input, providing higher average DC and lower ripple than half-wave circuits.",
+    "content_math": "V_{DC} = \\frac{2V_m}{\\pi}",
+    "video_url": "https://www.youtube.com/embed/RFwc2EOZ5CI",
+    "quiz_question": "What is the main advantage of a full-wave rectifier over a half-wave one?",
+    "quiz_options": ["Higher average output and 2x line frequency ripple", "Requires no diodes", "Constant DC without filters", "Doubles input frequency"],
+    "correct_answer": "Higher average output and 2x line frequency ripple"
+  },
+  {
+    "id": 9,
+    "module_id": 2,
+    "module_title": "High-Voltage & Power Electronics",
+    "module_description": "Exploration of dielectric breakdown and the building blocks of power conversion including rectifiers and DC-DC stages.",
+    "title": "Phase-Controlled Rectifiers",
+    "content_text": "Thyristors allow DC output control by delaying the firing instant (alpha). This is used in regulated motor drives.",
+    "content_math": "V_{DC} = \\frac{2V_m}{\\pi}\\cos\\alpha",
+    "video_url": "https://www.youtube.com/embed/zIhc6tcsIPQ",
+    "quiz_question": "What happens to average DC voltage as alpha increases from 0 toward 90 degrees?",
+    "quiz_options": ["Decreases", "Increases", "Frequency decreases", "SCRs stop requiring pulses"],
+    "correct_answer": "Decreases"
+  },
+  {
+    "id": 10,
+    "module_id": 2,
+    "module_title": "High-Voltage & Power Electronics",
+    "module_description": "Exploration of dielectric breakdown and the building blocks of power conversion including rectifiers and DC-DC stages.",
+    "title": "Buck Converter Fundamentals",
+    "content_text": "A buck converter steps down DC voltage via rapid switching and inductor smoothing. Duty cycle (D) is the primary control.",
+    "content_math": "V_{out} = D \\cdot V_{in}",
+    "video_url": "https://www.youtube.com/embed/O_rhsgEKpTM",
+    "quiz_question": "For an ideal buck converter, what D is needed to get 5V from 12V?",
+    "quiz_options": ["5/12", "12/5", "17/12", "1.0"],
+    "correct_answer": "5/12"
+  },
+  {
+    "id": 11,
+    "module_id": 2,
+    "module_title": "High-Voltage & Power Electronics",
+    "module_description": "Exploration of dielectric breakdown and the building blocks of power conversion including rectifiers and DC-DC stages.",
+    "title": "Boost Converter Operation",
+    "content_text": "A boost converter stores energy in an inductor during 'on' time and releases it at a higher voltage during 'off' time.",
+    "content_math": "V_{out} = \\frac{V_{in}}{1-D}",
+    "video_url": "https://www.youtube.com/embed/vmNpsofY4-U",
+    "quiz_question": "What is the ideal output of a boost converter with V_in = 10V and D = 0.6?",
+    "quiz_options": ["25V", "16V", "6V", "4V"],
+    "correct_answer": "25V"
+  },
+  {
+    "id": 12,
+    "module_id": 2,
+    "module_title": "High-Voltage & Power Electronics",
+    "module_description": "Exploration of dielectric breakdown and the building blocks of power conversion including rectifiers and DC-DC stages.",
+    "title": "PWM Inverters",
+    "content_text": "Inverters convert DC to AC using Pulse-Width Modulation to shift harmonics to higher, easier-to-filter frequencies.",
+    "content_math": "V_{1,rms} \\propto m_a V_{dc}",
+    "video_url": "https://www.youtube.com/embed/LYT-RRq8Bw8",
+    "quiz_question": "Why is PWM preferred over simple square-wave inverters?",
+    "quiz_options": ["Better fundamental control and easier filtering", "Zero switching losses", "No semiconductors needed", "Unity power factor"],
+    "correct_answer": "Better fundamental control and easier filtering"
+  },
+  {
+    "id": 13,
+    "module_id": 3,
+    "module_title": "C Programming & Memory",
+    "module_description": "Deep dive into low-level software systems, memory organization, pointers, and manual resource management.",
+    "title": "Pointer Arithmetic",
+    "content_text": "In C, incrementing a pointer moves it by the size of the underlying type, not by a single byte.",
+    "content_math": "p + n \\Rightarrow \\text{addr} + (n \\cdot \\text{sizeof}(*p))",
+    "video_url": "https://www.youtube.com/embed/ocOFKb6V6XE",
+    "quiz_question": "If 'int *p' is at 0x1000 and sizeof(int) is 4, what is the address of 'p + 2'?",
+    "quiz_options": ["0x1002", "0x1004", "0x1008", "0x1016"],
+    "correct_answer": "0x1008"
+  },
+  {
+    "id": 14,
+    "module_id": 3,
+    "module_title": "C Programming & Memory",
+    "module_description": "Deep dive into low-level software systems, memory organization, pointers, and manual resource management.",
+    "title": "Struct Padding & Alignment",
+    "content_text": "Compilers insert padding to ensure data is aligned to word boundaries for efficient CPU access.",
+    "content_math": "\\text{Offset} \\bmod{\\text{Alignment}} = 0",
+    "video_url": "https://www.youtube.com/embed/aROgtACPjjg",
+    "quiz_question": "Why is padding added between a char and an int in a struct?",
+    "quiz_options": ["Save memory", "Ensure int starts on 4-byte boundary", "Prevent overflow", "Endianness"],
+    "correct_answer": "Ensure int starts on 4-byte boundary"
+  },
+  {
+    "id": 15,
+    "module_id": 3,
+    "module_title": "C Programming & Memory",
+    "module_description": "Deep dive into low-level software systems, memory organization, pointers, and manual resource management.",
+    "title": "Dynamic Memory: Heap vs Stack",
+    "content_text": "The heap provides persistent memory but requires manual management, whereas the stack is handled automatically by function calls.",
+    "content_math": "\\text{malloc}(size\\_t) \\rightarrow \\text{void*}",
+    "video_url": "https://www.youtube.com/embed/5OJRqkYbK-4",
+    "quiz_question": "Which memory area is automatically managed by function calls?",
+    "quiz_options": ["Heap", "Stack", "Data Segment", "Registers"],
+    "correct_answer": "Stack"
+  },
+  {
+    "id": 16,
+    "module_id": 3,
+    "module_title": "C Programming & Memory",
+    "module_description": "Deep dive into low-level software systems, memory organization, pointers, and manual resource management.",
+    "title": "Function Pointers",
+    "content_text": "Function pointers allow dynamic dispatching and callbacks, enabling plugin-style architectures in C.",
+    "content_math": "\\text{void (*f)(int)}",
+    "video_url": "https://www.youtube.com/embed/f_uWOWViYc0",
+    "quiz_question": "What is a primary use for function pointers?",
+    "quiz_options": ["Callbacks or jump tables", "Global variables", "Pointer arithmetic", "Heap allocation"],
+    "correct_answer": "Callbacks or jump tables"
+  },
+  {
+    "id": 17,
+    "module_id": 3,
+    "module_title": "C Programming & Memory",
+    "module_description": "Deep dive into low-level software systems, memory organization, pointers, and manual resource management.",
+    "title": "The Sizeof Operator",
+    "content_text": "The sizeof operator in C returns the size of a variable or data type in bytes at compile time.",
+    "content_math": "\\text{sizeof}(char) = 1",
+    "video_url": "https://www.youtube.com/embed/RPecwl5zhzc",
+    "quiz_question": "What does the sizeof operator return?",
+    "quiz_options": ["Size in bytes", "Variable value", "Memory address", "Variable type"],
+    "correct_answer": "Size in bytes"
+  },
+  {
+    "id": 18,
+    "module_id": 4,
+    "module_title": "Computer Architecture",
+    "module_description": "Pipelining, hazard handling, and cache organization in modern processor design.",
+    "title": "MIPS 5-Stage Pipeline",
+    "content_text": "MIPS overlaps instructions across IF, ID, EX, MEM, and WB stages to achieve an ideal CPI of 1.",
+    "content_math": "\\text{Ideal CPI} = 1",
+    "video_url": "https://www.youtube.com/embed/RKVAXVv3Js0",
+    "quiz_question": "What does the 'IF' stage stand for?",
+    "quiz_options": ["Instruction Fetch", "Flow", "Format", "Interrupt Flag"],
+    "correct_answer": "Instruction Fetch"
+  },
+  {
+    "id": 19,
+    "module_id": 4,
+    "module_title": "Computer Architecture",
+    "module_description": "Pipelining, hazard handling, and cache organization in modern processor design.",
+    "title": "Data Hazards & Forwarding",
+    "content_text": "Forwarding allows a result to be used as soon as it is computed in the ALU, bypassing the WB stage.",
+    "content_math": "EX/MEM \\rightarrow ID/EX",
+    "video_url": "https://www.youtube.com/embed/whSHqkjIkHg",
+    "quiz_question": "How does forwarding resolve a data hazard?",
+    "quiz_options": ["Fetch result from ALU output", "Stall CPU", "Clear cache", "Reorder instructions"],
+    "correct_answer": "Fetch result from ALU output"
+  },
+  {
+    "id": 20,
+    "module_id": 4,
+    "module_title": "Computer Architecture",
+    "module_description": "Pipelining, hazard handling, and cache organization in modern processor design.",
+    "title": "Control Hazards & Branch Prediction",
+    "content_text": "Control hazards occur when the CPU doesn't know the next instruction address until a branch is resolved.",
+    "content_math": "\\text{Penalty} = \\text{Stall Cycles}",
+    "video_url": "https://www.youtube.com/embed/Gp2cwH740O0",
+    "quiz_question": "Which technique reduces control hazard penalties?",
+    "quiz_options": ["Branch Prediction", "Loop unrolling", "Virtual Memory", "Clock gating"],
+    "correct_answer": "Branch Prediction"
+  },
+  {
+    "id": 21,
+    "module_id": 4,
+    "module_title": "Computer Architecture",
+    "module_description": "Pipelining, hazard handling, and cache organization in modern processor design.",
+    "title": "Cache Mapping: Direct vs Associative",
+    "content_text": "Associativity reduces conflict misses by allowing a memory block to reside in multiple cache locations.",
+    "content_math": "\\text{Index} = \\text{Addr} \\bmod{\\text{Sets}}",
+    "video_url": "https://www.youtube.com/embed/fMaqtKEHUT4",
+    "quiz_question": "What is the benefit of Set-Associative cache over Direct-Mapped?",
+    "quiz_options": ["Lower conflict miss rate", "Lower latency", "Lower cost", "Larger capacity"],
+    "correct_answer": "Lower conflict miss rate"
+  },
+  {
+    "id": 22,
+    "module_id": 4,
+    "module_title": "Computer Architecture",
+    "module_description": "Pipelining, hazard handling, and cache organization in modern processor design.",
+    "title": "RISC vs CISC Architecture",
+    "content_text": "RISC focuses on simple, single-cycle instructions to maximize efficiency. MIPS is a classic RISC example.",
+    "content_math": "\\text{Perf} = 1/\\text{Execution Time}",
+    "video_url": "https://www.youtube.com/embed/L4Lo1sGEeQA",
+    "quiz_question": "Which is a core characteristic of RISC?",
+    "quiz_options": ["Load-Store architecture", "Complex instructions", "High CPI", "Micro-coded control"],
+    "correct_answer": "Load-Store architecture"
+  },
+  {
+    "id": 23,
+    "module_id": 5,
+    "module_title": "Signals & Systems",
+    "module_description": "Mathematical language of signals, LTI systems, convolution, and Fourier analysis.",
+    "title": "Continuous vs Discrete Signals",
+    "content_text": "Signals are functions of time. Discrete-time signals are defined only at sampled instants T_s.",
+    "content_math": "x[n] = x_c(nT_s)",
+    "video_url": "https://www.youtube.com/embed/H4hk6N5vC1Q",
+    "quiz_question": "What is the role of T_s in sampling?",
+    "quiz_options": ["Sampling period mapping", "Amplitude scaling", "Angular frequency", "Delay factor"],
+    "correct_answer": "Sampling period mapping"
+  },
+  {
+    "id": 24,
+    "module_id": 5,
+    "module_title": "Signals & Systems",
+    "module_description": "Mathematical language of signals, LTI systems, convolution, and Fourier analysis.",
+    "title": "System Properties and BIBO Stability",
+    "content_text": "For LTI systems, BIBO stability is guaranteed if the impulse response is absolutely integrable.",
+    "content_math": "\\int |h(t)|dt < \\infty",
+    "video_url": "https://www.youtube.com/embed/Y8iFJVmSQIk",
+    "quiz_question": "What is sufficient for BIBO stability in CT LTI systems?",
+    "quiz_options": ["Absolutely integrable impulse response", "Periodic input", "Memory", "Nonzero output at 0"],
+    "correct_answer": "Absolutely integrable impulse response"
+  },
+  {
+    "id": 25,
+    "module_id": 5,
+    "module_title": "Signals & Systems",
+    "module_description": "Mathematical language of signals, LTI systems, convolution, and Fourier analysis.",
+    "title": "Convolution and Impulse Response",
+    "content_text": "Convolution defines the output of an LTI system given an input and impulse response.",
+    "content_math": "y(t) = x(t) * h(t)",
+    "video_url": "https://www.youtube.com/embed/HATc2zAhcY",
+    "quiz_question": "In convolution, what does h(t-tau) represent?",
+    "quiz_options": ["Shifted/Time-reversed impulse response", "Fourier transform", "Derivative", "Normalization constant"],
+    "correct_answer": "Shifted/Time-reversed impulse response"
+  },
+  {
+    "id": 26,
+    "module_id": 5,
+    "module_title": "Signals & Systems",
+    "module_description": "Mathematical language of signals, LTI systems, convolution, and Fourier analysis.",
+    "title": "Fourier Transform Intuition",
+    "content_text": "The Fourier transform decomposes signals into frequencies. Convolution in time becomes multiplication in frequency.",
+    "content_math": "X(j\\omega) = \\int x(t)e^{-j\\omega t} dt",
+    "video_url": "https://www.youtube.com/embed/rCw-FVegWJA",
+    "quiz_question": "Why use Fourier transforms for LTI systems?",
+    "quiz_options": ["Convolution becomes multiplication", "Makes systems stable", "Removes phase", "Guarantees finite output"],
+    "correct_answer": "Convolution becomes multiplication"
+  },
+  {
+    "id": 27,
+    "module_id": 5,
+    "module_title": "Signals & Systems",
+    "module_description": "Mathematical language of signals, LTI systems, convolution, and Fourier analysis.",
+    "title": "Sampling Theorem and Aliasing",
+    "content_text": "To perfectly reconstruct a signal, the sampling frequency must be at least twice the maximum signal frequency.",
+    "content_math": "f_s \\ge 2f_{max}",
+    "video_url": "https://www.youtube.com/embed/iQaFDpiNOlA",
+    "quiz_question": "What is the result of sampling below the Nyquist rate?",
+    "quiz_options": ["Aliasing/Frequency overlap", "Amplitude doubles", "Nonlinear system", "Continuous signal"],
+    "correct_answer": "Aliasing/Frequency overlap"
+  },
+  {
+    "id": 28,
+    "module_id": 6,
+    "module_title": "Control Theory",
+    "module_description": "Tools for feedback systems design including stability, root locus, and frequency response.",
+    "title": "Closed-Loop Transfer Functions",
+    "content_text": "Relates the Laplace output to input. Negative feedback improves accuracy and robustness.",
+    "content_math": "T(s) = G(s)/(1 + GsHs)",
+    "video_url": "https://www.youtube.com/embed/AvaZ_E-nFTk",
+    "quiz_question": "What happens if feedback path H(s) increases?",
+    "quiz_options": ["Denominator changes/poles shift", "Only numerator changes", "Independent of G(s)", "Becomes open-loop"],
+    "correct_answer": "Denominator changes/poles shift"
+  },
+  {
+    "id": 29,
+    "module_id": 6,
+    "module_title": "Control Theory",
+    "module_description": "Tools for feedback systems design including stability, root locus, and frequency response.",
+    "title": "Second-Order Time Response",
+    "content_text": "Governed by damping ratio (zeta) and natural frequency. Zeta determines overshoot and oscillations.",
+    "content_math": "\\text{Char Eq: } s^2 + 2\\zeta\\omega_n s + \\omega_n^2",
+    "video_url": "https://www.youtube.com/embed/J8MeWZ3WJao",
+    "quiz_question": "What happens if zeta decreases?",
+    "quiz_options": ["Overshoot increases", "Overshoot disappears", "Poles move deeper left", "First order behavior"],
+    "correct_answer": "Overshoot increases"
+  },
+  {
+    "id": 30,
+    "module_id": 6,
+    "module_title": "Control Theory",
+    "module_description": "Tools for feedback systems design including stability, root locus, and frequency response.",
+    "title": "Routh-Hurwitz Stability Test",
+    "content_text": "Determines stability without solving the characteristic equation by checking for RHP roots.",
+    "content_math": "a_2 a_1 > a_3 a_0",
+    "video_url": "https://www.youtube.com/embed/cyannwIgg1E",
+    "quiz_question": "For a cubic equation with positive coefficients, what is required for stability?",
+    "quiz_options": ["a2a1 > a3a0", "a2a1 < a3a0", "a3 = a0", "a1 = 0"],
+    "correct_answer": "a2a1 > a3a0"
+  },
+  {
+    "id": 31,
+    "module_id": 6,
+    "module_title": "Control Theory",
+    "module_description": "Tools for feedback systems design including stability, root locus, and frequency response.",
+    "title": "Root Locus Design Insight",
+    "content_text": "Visual design tool showing how closed-loop poles move as gain K is varied.",
+    "content_math": "1 + K G(s)H(s) = 0",
+    "video_url": "https://www.youtube.com/embed/CRvVDoQJjYI",
+    "quiz_question": "What is varied when constructing root locus?",
+    "quiz_options": ["Loop gain K", "Sampling period", "Input amplitude", "Plant order"],
+    "correct_answer": "Loop gain K"
+  },
+  {
+    "id": 32,
+    "module_id": 6,
+    "module_title": "Control Theory",
+    "module_description": "Tools for feedback systems design including stability, root locus, and frequency response.",
+    "title": "Bode Plots and Stability Margins",
+    "content_text": "Magnitude and phase vs frequency. Phase margin measures proximity to instability.",
+    "content_math": "PM = 180^\\circ + \\angle G(j\\omega)H(j\\omega)",
+    "video_url": "https://www.youtube.com/embed/idStvAbUMt8",
+    "quiz_question": "What does a larger positive phase margin indicate?",
+    "quiz_options": ["Greater relative stability", "Zero steady-state error", "RHP pole", "Gain crossover ends"],
+    "correct_answer": "Greater relative stability"
+  },
+  {
+    "id": 33,
+    "module_id": 7,
+    "module_title": "Digital Logic & Microprocessors",
+    "module_description": "Boolean minimization, universal gates, state elements, and 8086 architecture fundamentals.",
+    "title": "Karnaugh Maps for Logic Minimization",
+    "content_text": "Visual tool to simplify expressions by grouping minterms in powers of two.",
+    "content_math": "F = \\sum m(x, y)",
+    "video_url": "https://www.youtube.com/embed/FPrcIhqNPVo",
+    "quiz_question": "Why are larger valid groups preferred in K-maps?",
+    "quiz_options": ["Eliminate more variables", "Increase product terms", "Guarantee POS form", "Prevent don't-cares"],
+    "correct_answer": "Eliminate more variables"
+  },
+  {
+    "id": 34,
+    "module_id": 7,
+    "module_title": "Digital Logic & Microprocessors",
+    "module_description": "Boolean minimization, universal gates, state elements, and 8086 architecture fundamentals.",
+    "title": "Multiplexers as Universal Selectors",
+    "content_text": "Routes one of several inputs to an output. Can implement any Boolean function.",
+    "content_math": "Y = S'I_0 + SI_1",
+    "video_url": "https://www.youtube.com/embed/FKvnmxte98A",
+    "quiz_question": "For a 2:1 MUX, what is Y when S = 1?",
+    "quiz_options": ["Y = I1", "Y = I0", "Y = I0 + I1", "0"],
+    "correct_answer": "Y = I1"
+  },
+  {
+    "id": 35,
+    "module_id": 7,
+    "module_title": "Digital Logic & Microprocessors",
+    "module_description": "Boolean minimization, universal gates, state elements, and 8086 architecture fundamentals.",
+    "title": "D Flip-Flops and State Storage",
+    "content_text": "Edge-triggered elements that capture input at clock edges to coordinate synchronous state updates.",
+    "content_math": "Q_{next} = D",
+    "video_url": "https://www.youtube.com/embed/dnfXXpW7tIw",
+    "quiz_question": "Primary benefit of edge-triggered DFFs?",
+    "quiz_options": ["Synchronized state updates", "Removes clock needs", "Removes combinational logic", "Stores multiple bits"],
+    "correct_answer": "Synchronized state updates"
+  },
+  {
+    "id": 36,
+    "module_id": 7,
+    "module_title": "Digital Logic & Microprocessors",
+    "module_description": "Boolean minimization, universal gates, state elements, and 8086 architecture fundamentals.",
+    "title": "8086 Architecture and Segmentation",
+    "content_text": "16-bit processor using a segmented memory model to address 1MB using 16-bit registers.",
+    "content_math": "\\text{Phys Addr} = 16 \\cdot \\text{Seg} + \\text{Off}",
+    "video_url": "https://www.youtube.com/embed/DmwOSdwzZ3E",
+    "quiz_question": "What is the physical address for Segment 1234H and Offset 0010H?",
+    "quiz_options": ["12350H", "12340H", "12440H", "1234AH"],
+    "correct_answer": "12350H"
+  },
+  {
+    "id": 37,
+    "module_id": 7,
+    "module_title": "Digital Logic & Microprocessors",
+    "module_description": "Boolean minimization, universal gates, state elements, and 8086 architecture fundamentals.",
+    "title": "8086 Addressing Modes",
+    "content_text": "Specifies how instructions locate operands using registers, memory, or immediate fields.",
+    "content_math": "EA = BX + SI + \\text{disp}",
+    "video_url": "https://www.youtube.com/embed/GVjwui-OQhU",
+    "quiz_question": "In [BX + SI + 08H], what does 08H represent?",
+    "quiz_options": ["Displacement", "Segment", "Opcode", "Flag mask"],
+    "correct_answer": "Displacement"
+  }
+]
+
+==================== FILE: ./backend/auth.py ====================
+
+import os
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from supabase import create_client, Client
+from dotenv import load_dotenv
+from database import SessionLocal
+import models
+
+load_dotenv()
+
+url: str = os.environ.get("SUPABASE_URL")
+key: str = os.environ.get("SUPABASE_KEY")
+supabase: Client = create_client(url, key)
+
+security = HTTPBearer()
+
+# DTO: This prevents SQLAlchemy "DetachedInstanceErrors" after the session closes
+class ValidatedUser:
+    def __init__(self, id: str, email: str, role: str, first_name: str = "", last_name: str = ""):
+        self.id = id
+        self.email = email
+        self.role = role
+        self.first_name = first_name
+        self.last_name = last_name
+
+async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(security)):
+    token = auth.credentials
+    try:
+        user_response = supabase.auth.get_user(token)
+        if not user_response.user:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Supabase Auth Error: {str(e)}")
+        
+    db = SessionLocal()
+    try:
+        db_user = db.query(models.User).filter(models.User.id == user_response.user.id).first()
+        
+        # Extract metadata from Supabase
+        meta = user_response.user.user_metadata or {}
+        f_name = meta.get("first_name", "")
+        l_name = meta.get("last_name", "")
+        
+        if not db_user:
+            db_user = models.User(
+                id=user_response.user.id,
+                email=user_response.user.email,
+                role="user",
+                first_name=f_name,
+                last_name=l_name
+            )
+            db.add(db_user)
+            db.commit()
+            db.refresh(db_user)
+            
+        return ValidatedUser(
+            id=db_user.id, 
+            email=db_user.email, 
+            role=db_user.role,
+            first_name=getattr(db_user, 'first_name', ''),
+            last_name=getattr(db_user, 'last_name', '')
+        )
+    except Exception as db_err:
+        print(f"Database Error in Lazy Sync: {db_err}")
+        raise HTTPException(status_code=500, detail="Internal Database Synchronization Error")
+    finally:
+        db.close()
+
+async def get_admin_user(current_user: ValidatedUser = Depends(get_current_user)):
+    """Secondary Gatekeeper: Checks if the validated user has admin rights."""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access the Content Studio."
+        )
+    return current_user
+
+==================== FILE: ./backend/.DS_Store ====================
+
+[binary file omitted]
+
+
+==================== FILE: ./backend/models.py ====================
+
+from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, Text
+from sqlalchemy.orm import relationship
+from database import Base
+import datetime
+
+class User(Base):
+    __tablename__ = "users"
+
+    # String is required here to hold Supabase UUIDs
+    id = Column(String, primary_key=True, index=True) 
+    email = Column(String, unique=True, index=True, nullable=False)
+    role = Column(String, default="user")
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
+
+    # The relationship linking User to their Progress
+    progress = relationship("UserProgress", back_populates="user", cascade="all, delete-orphan")
+
+
+class Module(Base):
+    __tablename__ = "modules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(100), nullable=False)
+    description = Column(Text, nullable=True)
+
+    lessons = relationship("Lesson", back_populates="module", cascade="all, delete-orphan")
+
+
+class Lesson(Base):
+    __tablename__ = "lessons"
+
+    id = Column(Integer, primary_key=True, index=True)
+    module_id = Column(Integer, ForeignKey("modules.id", ondelete="CASCADE"))
+    title = Column(String(255), nullable=False)
+    content_text = Column(Text, nullable=False)
+    content_math = Column(Text, nullable=True)
+    
+    # Media/Quiz Fields
+    video_url = Column(String, nullable=True)
+    quiz_question = Column(String, nullable=True)
+    # Using String/Text for simple arrays in SQLite/Postgres. JSON is better if strictly Postgres.
+    quiz_options = Column(Text, nullable=True) 
+    correct_answer = Column(String, nullable=True)
+
+    module = relationship("Module", back_populates="lessons")
+    progress = relationship("UserProgress", back_populates="lesson", cascade="all, delete-orphan")
+
+
+class UserProgress(Base):
+    __tablename__ = "user_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # ⚠️ CRITICAL FIX: user_id MUST be a String to match User.id (Supabase UUID)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"))
+    lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="CASCADE"))
+    
+    ease_factor = Column(Float, default=2.5)
+    interval = Column(Integer, default=0)
+    repetitions = Column(Integer, default=0)
+    next_review_date = Column(Date, default=datetime.date.today)
+
+    # ⚠️ CRITICAL FIX: The back_populates mapping that caused your error
+    user = relationship("User", back_populates="progress")
+    lesson = relationship("Lesson", back_populates="progress")
+
+==================== FILE: ./backend/requirements.txt ====================
+
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+supabase
+python-dotenv
+pydantic
+pytest
+
+==================== FILE: ./backend/schema.sql ====================
+
+-- 1. Users Table
+CREATE TABLE users (
+    id VARCHAR(255) PRIMARY KEY, -- Changed to VARCHAR to match Supabase UUIDs
+    email VARCHAR(255) UNIQUE NOT NULL,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    role VARCHAR(50) DEFAULT 'user',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+-- 2. Modules Table (e.g., "VLSI Design", "Power Electronics")
+CREATE TABLE modules (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. Lessons Table (The actual micro-content)
+CREATE TABLE lessons (
+    id SERIAL PRIMARY KEY,
+    module_id INTEGER REFERENCES modules(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    content_text TEXT NOT NULL,
+    content_math TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 4. User Progress (The Spaced Repetition Engine)
+CREATE TABLE user_progress (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    lesson_id INTEGER REFERENCES lessons(id) ON DELETE CASCADE,
+    ease_factor REAL DEFAULT 2.5,
+    interval INTEGER DEFAULT 0,
+    repetitions INTEGER DEFAULT 0,
+    next_review_date DATE DEFAULT CURRENT_DATE,
+    UNIQUE(user_id, lesson_id)
+);
+
+==================== FILE: ./backend/database.py ====================
+
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
+
+load_dotenv()
+# The connection string to your local PostgreSQL database
+SQLALCHEMY_DATABASE_URL = os.environ.get("DATABASE_URL")
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+
+==================== FILE: ./backend/test_srs.py ====================
+
+import pytest
+from datetime import date, timedelta
+
+# Simple mock of your SM-2 logic for the test
+def calculate_next_review(quality, repetitions, interval, ease_factor):
+    if quality < 3:
+        return 1, 0, 2.5  # Reset on failure
+    
+    if repetitions == 0:
+        new_interval = 1
+    elif repetitions == 1:
+        new_interval = 6
+    else:
+        new_interval = round(interval * ease_factor)
+        
+    new_ease_factor = ease_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+    if new_ease_factor < 1.3:
+        new_ease_factor = 1.3
+        
+    return new_interval, repetitions + 1, new_ease_factor
+
+def test_sm2_progression():
+    """Tests the core exponential growth of the SM-2 algorithm."""
+    # Start: Fresh lesson
+    interval, reps, ef = calculate_next_review(quality=5, repetitions=0, interval=0, ease_factor=2.5)
+    assert interval == 1
+    assert reps == 1
+    
+    # Second successful review
+    interval, reps, ef = calculate_next_review(quality=5, repetitions=1, interval=1, ease_factor=2.5)
+    assert interval == 6
+    assert reps == 2
+    
+    # Third successful review (Exponential growth)
+    # $I(n) = Round(I(n-1) \times EF)$
+    interval, reps, ef = calculate_next_review(quality=5, repetitions=2, interval=6, ease_factor=2.5)
+    assert interval == 15 # 6 * 2.5
+    assert reps == 3
+
+
+
+==================== FILE: ./backend/reset_db.py ====================
+
+from database import engine
+from sqlalchemy import text
+
+def reset_database():
+    with engine.connect() as conn:
+        print("🧹 Wiping data and resetting ID counters...")
+        # This order is important because of Foreign Key dependencies
+        conn.execute(text("TRUNCATE TABLE user_progress RESTART IDENTITY CASCADE;"))
+        conn.execute(text("TRUNCATE TABLE lessons RESTART IDENTITY CASCADE;"))
+        conn.execute(text("TRUNCATE TABLE modules RESTART IDENTITY CASCADE;"))
+        conn.commit()
+    print("✨ Database is now empty and IDs are reset to 1.")
+
+if __name__ == "__main__":
+    reset_database()
+
+==================== FILE: ./backend/schemas.py ====================
+
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+from typing import List, Optional, Any
+from datetime import date
+import json
+
+# --- USER SCHEMAS ---
+class UserBase(BaseModel):
+    email: str
+    role: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+class User(UserBase):
+    id: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+# --- MODULE SCHEMAS ---
+class ModuleBase(BaseModel):
+    title: str
+    description: str
+
+class ModuleCreate(ModuleBase):
+    pass
+
+class ModuleResponse(ModuleBase):
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ModuleUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+
+# --- LESSON SCHEMAS ---
+class LessonBase(BaseModel):
+    module_id: int
+    title: str
+    content_text: str
+    content_math: Optional[str] = None
+    video_url: Optional[str] = None
+    quiz_question: Optional[str] = None
+    quiz_options: Optional[Any] = None # Accept any format temporarily for flexible creation
+    correct_answer: Optional[str] = None
+
+class LessonCreate(LessonBase):
+    pass
+
+class LessonUpdate(BaseModel):
+    title: Optional[str] = None
+    content_text: Optional[str] = None
+    content_math: Optional[str] = None
+    video_url: Optional[str] = None
+    quiz_question: Optional[str] = None
+    quiz_options: Optional[Any] = None 
+    correct_answer: Optional[str] = None
+
+class LessonResponse(BaseModel):
+    id: int
+    module_id: int
+    title: str
+    content_text: str
+    content_math: Optional[str] = None
+    video_url: Optional[str] = None 
+    quiz_question: Optional[str] = None
+    quiz_options: Optional[List[str]] = None
+    correct_answer: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    # 🛠️ CRITICAL FIX: Convert DB string to List[str] automatically
+    @field_validator('quiz_options', mode='before')
+    @classmethod
+    def parse_quiz_options(cls, v):
+        if isinstance(v, str):
+            # Try to parse it as JSON first
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except Exception:
+                pass
+            
+            # If it's a raw Postgres array like "{Option A, Option B}"
+            if v.startswith("{") and v.endswith("}"):
+                # Strip the brackets
+                cleaned = v[1:-1]
+                # Split by comma. This is a simplified split; 
+                # for robust parsing, JSON storage in DB is highly recommended.
+                # Here we strip extra quotes just in case.
+                items = [item.strip(' "') for item in cleaned.split(',')]
+                return items
+                
+            return [v] # Fallback: return the raw string as a single item list
+            
+        return v
+
+# --- PROGRESS SCHEMAS ---
+class ProgressUpdateRequest(BaseModel):
+    quality: int = Field(..., ge=0, le=5) 
+
+class ProgressUpdateResponse(BaseModel):
+    status: str
+    message: str
+    next_review_date: date
+    interval: int
+    repetitions: int
+    ease_factor: float
+
+class UserProgressBase(BaseModel):
+    user_id: str
+    lesson_id: int
+    repetitions: int
+    interval: int
+    ease_factor: float
+    next_review_date: date
+
+class UserProgressCreate(UserProgressBase):
+    pass
+
+class UserProgress(UserProgressBase):
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ModuleProgressSummary(BaseModel):
+    module_id: int
+    module_title: str
+    total_lessons: int
+    lessons_started : int
+    mastery_score : float
+
+    model_config = ConfigDict(from_attributes=True)
+
+==================== FILE: ./backend/.gitignore ====================
+
+# 🔐 Secrets
+.env
+
+# 🐍 Python Virtual Environment
+venv/
+.venv/
+env/
+
+# 📂 Python Cache & Compiled Files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.vscode/
+
+# 📉 Databases (If you ever used local SQLite)
+*.sqlite3
+*.db
+
+#for opensource usage
+!.env.example
+
+==================== FILE: ./backend/.env.example ====================
+
+# Supabase Auth
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_KEY=your_supabase_service_role_key
+
+# Database (Pooled Connection)
+DATABASE_URL=postgresql://postgres.your_id:[YOUR-PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
+
+==================== FILE: ./backend/seed_json.py ====================
+
+import json
+from sqlalchemy.orm import Session
+from database import SessionLocal, engine
+import models
+
+def seed_data():
+    db: Session = SessionLocal()
+    try:
+        with open("ee_curriculum.json", "r") as f:
+            data = json.load(f)
+
+        print(f"🚀 Starting smart injection of {len(data)} items...")
+
+        for item in data:
+            mod_id = item.get("module_id")
+            
+            # 1. Find or Create the Module with ACTUAL Title/Description
+            db_module = db.query(models.Module).filter(models.Module.id == mod_id).first()
+            
+            if not db_module:
+                print(f"📁 Creating Module {mod_id}: {item.get('module_title')}")
+                db_module = models.Module(
+                    id=mod_id, 
+                    title=item.get("module_title", f"Module {mod_id}"), 
+                    description=item.get("module_description", "No description provided.")
+                )
+                db.add(db_module)
+                db.flush() # Sync with DB to ensure mod_id is reserved
+
+            # 2. Add the Lesson
+            new_lesson = models.Lesson(
+                title=item.get("title"),
+                module_id=mod_id,
+                content_text=item.get("content_text", ""),
+                content_math=item.get("content_math"),
+                video_url=item.get("video_url"),
+                quiz_question=item.get("quiz_question"),
+                quiz_options=item.get("quiz_options"),
+                correct_answer=item.get("correct_answer")
+            )
+            db.add(new_lesson)
+            print(f"   ✅ Added Lesson: {item.get('title')}")
+
+        db.commit()
+        print("\n✨ Database successfully synchronized!")
+
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+if __name__ == "__main__":
+    seed_data()
+
+==================== FILE: ./backend/main.py ====================
+
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+from typing import List
+from datetime import date, timedelta
+import random
+
+# Internal app imports
+import models, schemas
+from database import SessionLocal
+from auth import get_current_user, get_admin_user, ValidatedUser
+
+# Initialize FastAPI application
+app = FastAPI(
+    title="Spirelay API",
+    description="The core backend for the Spirelay Cyber-Physical Learning Platform. Handles curriculum management, SM-2 spaced repetition algorithms, and user telemetry.",
+    version="3.1.0"
+)
+
+# ==========================================
+# 1. MIDDLEWARE & DEPENDENCIES
+# ==========================================
+
+# Configure Cross-Origin Resource Sharing (CORS)
+# Allows the Next.js frontend running on localhost:3000 to securely communicate with this API.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+def get_db():
+    """
+    Dependency generator for database sessions.
+    Opens a fresh connection for every incoming request and guarantees it is safely closed
+    after the request resolves, preventing connection leaks.
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# ==========================================
+# 2. SYSTEM HEALTH & IDENTITY
+# ==========================================
+
+@app.get("/")
+def read_root():
+    """
+    Public Health Check Endpoint.
+    Used by load balancers or uptime monitors to verify the API is alive.
+    """
+    return {"status": "success", "message": "The Spirelay API is live!"}
+
+@app.get("/api/users/me")
+def get_user_profile(current_user: ValidatedUser = Depends(get_current_user)):
+    """
+    Identity Verification Endpoint. (Protected)
+    Validates the Supabase JWT token and returns the current user's profile and RBAC (Role-Based Access Control) level.
+    Used by the frontend to gate UI elements like the Admin Dashboard.
+    """
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "role": current_user.role,
+        "first_name": current_user.first_name,
+        "last_name": current_user.last_name
+    }
+
+# ==========================================
+# 3. CURRICULUM MODULES API
+# ==========================================
+
+@app.get("/api/modules", response_model=List[schemas.ModuleResponse])
+def get_modules(
+    db: Session = Depends(get_db),
+    current_user: ValidatedUser = Depends(get_current_user)
+):
+    """
+    Fetch all high-level engineering modules/topics.
+    Publicly accessible to logged-in users.
+    """
+    return db.query(models.Module).order_by(models.Module.id).all()
+
+@app.get("/api/modules/{module_id}/lessons", response_model=List[schemas.LessonResponse])
+def get_lessons_for_module(
+    module_id: int,
+    db: Session = Depends(get_db),
+    current_user: ValidatedUser = Depends(get_current_user)
+):
+    """
+    Fetch all micro-lessons mapped to a specific module.
+    """
+    return db.query(models.Lesson).filter(models.Lesson.module_id == module_id).order_by(models.Lesson.id).all()
+
+@app.post("/api/modules", response_model=schemas.ModuleResponse)
+def create_module(module: schemas.ModuleCreate, db: Session = Depends(get_db), admin_user: models.User = Depends(get_admin_user)):
+    """
+    Create a new module. 
+    (Protected: Admin Only)
+    """
+    new_module = models.Module(**module.model_dump())
+    db.add(new_module)
+    db.commit()
+    db.refresh(new_module)
+    return new_module
+
+@app.put("/api/modules/{module_id}", response_model=schemas.ModuleResponse)
+def update_module(module_id: int, module_update: schemas.ModuleUpdate, db: Session = Depends(get_db), admin_user: models.User = Depends(get_admin_user)):
+    """
+    Update an existing module's title or description. Partial updates are supported.
+    (Protected: Admin Only)
+    """
+    db_module = db.query(models.Module).filter(models.Module.id == module_id).first()
+    if not db_module:
+        raise HTTPException(status_code=404, detail="Module not found")
+    
+    # exclude_unset=True ensures we only overwrite fields provided in the JSON payload
+    update_data = module_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_module, key, value)
+        
+    db.commit()
+    db.refresh(db_module)
+    return db_module
+
+@app.delete("/api/modules/{module_id}")
+def delete_module(module_id: int, db: Session = Depends(get_db), admin_user: models.User = Depends(get_admin_user)):
+    """
+    Permanently delete a module.
+    WARNING: SQLAlchemy cascading rules will also delete all associated lessons and user progress logs!
+    (Protected: Admin Only)
+    """
+    db_module = db.query(models.Module).filter(models.Module.id == module_id).first()
+    if not db_module:
+        raise HTTPException(status_code=404, detail="Module not found")
+        
+    db.delete(db_module)
+    db.commit()
+    return {"status": "success", "message": f"Module {module_id} and its children successfully deleted."}
+
+# ==========================================
+# 4. MICRO-LESSON API
+# ==========================================
+
+@app.get("/api/lessons", response_model=List[schemas.LessonResponse])
+def get_all_lessons(
+    db: Session = Depends(get_db),
+    current_user: ValidatedUser = Depends(get_current_user)
+):
+    """Fetch every lesson in the entire database."""
+    return db.query(models.Lesson).order_by(models.Lesson.id).all()
+
+@app.get("/api/lessons/{lesson_id}", response_model=schemas.LessonResponse)
+def get_lesson(
+    lesson_id: int,
+    db: Session = Depends(get_db),
+    current_user: ValidatedUser = Depends(get_current_user)
+):
+    """Fetch the specific technical payload for a single lesson node."""
+    lesson = db.query(models.Lesson).filter(models.Lesson.id == lesson_id).first()
+    if lesson is None:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    return lesson
+
+@app.post("/api/lessons", response_model=schemas.LessonResponse)
+def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(get_db), admin_user: models.User = Depends(get_admin_user)):
+    """
+    Inject a new lesson into a module.
+    (Protected: Admin Only)
+    """
+    new_lesson = models.Lesson(**lesson.model_dump())
+    db.add(new_lesson)
+    db.commit()
+    db.refresh(new_lesson)
+    return new_lesson
+
+@app.put("/api/lessons/{lesson_id}", response_model=schemas.LessonResponse)
+def update_lesson(lesson_id: int, lesson_update: schemas.LessonUpdate, db: Session = Depends(get_db), admin_user: models.User = Depends(get_admin_user)):
+    """
+    Update a specific lesson's content, math payload, or media URL.
+    (Protected: Admin Only)
+    """
+    db_lesson = db.query(models.Lesson).filter(models.Lesson.id == lesson_id).first()
+    if not db_lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+        
+    update_data = lesson_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_lesson, key, value)
+        
+    db.commit()
+    db.refresh(db_lesson)
+    return db_lesson
+
+@app.delete("/api/lessons/{lesson_id}")
+def delete_lesson(lesson_id: int, db: Session = Depends(get_db), admin_user: models.User = Depends(get_admin_user)):
+    """
+    Permanently delete a lesson and clean up all users' SM-2 progress associated with it.
+    (Protected: Admin Only)
+    """
+    db_lesson = db.query(models.Lesson).filter(models.Lesson.id == lesson_id).first()
+    if not db_lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+        
+    db.delete(db_lesson)
+    db.commit()
+    return {"status": "success", "message": f"Lesson {lesson_id} successfully deleted."}
+
+# ==========================================
+# 5. SUPER-MEMO 2 (SM-2) PROGRESS ENGINE
+# ==========================================
+
+@app.post("/api/progress/{lesson_id}", response_model=schemas.ProgressUpdateResponse)
+def mark_lesson_understood(
+    lesson_id: int,
+    payload: schemas.ProgressUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: ValidatedUser = Depends(get_current_user)
+):
+    """
+    Core Spaced Repetition Logic (SM-2 Algorithm).
+    Evaluates the user's self-assessed quality (1-5) and recalculates the interval
+    and ease factor to predict exactly when they will forget the concept.
+    """
+    user_id = current_user.id
+    q = max(0, min(5, payload.quality))
+    
+    # 1. Fetch existing telemetry or initialize a new neural pathway
+    progress = db.query(models.UserProgress).filter(
+        models.UserProgress.user_id == user_id,
+        models.UserProgress.lesson_id == lesson_id
+    ).first()
+
+    if not progress:
+        progress = models.UserProgress(
+            user_id=user_id,
+            lesson_id=lesson_id,
+            ease_factor=2.5,  # Standard SM-2 baseline
+            repetitions=0,
+            interval=0
+        )
+        db.add(progress)
+
+    # Anti-spam guardrail: do not permit additional "success" submissions
+    # before the current item is due.
+    if progress.next_review_date and progress.next_review_date > date.today() and q >= 3:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Review already scheduled for {progress.next_review_date.isoformat()}. "
+                "Wait until it is due before logging another successful recall."
+            ),
+        )
+
+    # 2. Apply SM-2 Interval Calculation
+    if q >= 3:  # Successful recall (Hard, Good, Easy)
+        if progress.repetitions == 0:
+            progress.interval = 1
+        elif progress.repetitions == 1:
+            progress.interval = 6
+        else:
+            progress.interval = round(progress.interval * progress.ease_factor)
+        
+        progress.repetitions += 1
+    else:  # Failed recall (Again) - Reset the sequence
+        progress.repetitions = 0
+        progress.interval = 1
+
+    # 3. Calculate New Ease Factor
+    # Formula: EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
+    new_ef = progress.ease_factor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
+    progress.ease_factor = max(1.3, new_ef) # Cap the floor at 1.3 to prevent infinite failure loops
+
+    # 4. Set Next Review Deadline
+    progress.next_review_date = date.today() + timedelta(days=progress.interval)
+    
+    db.commit()
+    db.refresh(progress)
+
+    return {
+        "status": "success",
+        "message": f"SM-2 Calibrated. Review in {progress.interval} days.",
+        "next_review_date": progress.next_review_date,
+        "interval": progress.interval,
+        "repetitions": progress.repetitions,
+        "ease_factor": progress.ease_factor
+    }
+
+@app.get("/api/progress/due")
+def get_due_reviews(
+    db: Session = Depends(get_db),
+    current_user: ValidatedUser = Depends(get_current_user)
+):
+    """Calculates how many reviews are currently due for the user's dashboard badge."""
+    user_id = current_user.id
+    today = date.today() + timedelta(days=6) # Configured lookahead window
+    
+    due_count = db.query(models.UserProgress).filter(
+        models.UserProgress.user_id == user_id,
+        models.UserProgress.next_review_date <= today
+    ).count()
+    
+    return {"due_count": due_count}
+
+@app.get("/api/progress/summary", response_model=List[schemas.ModuleProgressSummary])
+def get_progress_summary(
+    db: Session = Depends(get_db),
+    current_user: ValidatedUser = Depends(get_current_user)
+):
+    """
+    Generates Mastery Scores for the home dashboard charts.
+    Calculates progress by comparing user repetition logs against total module lesson counts.
+    """
+    user_id = current_user.id
+    modules = db.query(models.Module).all()
+    summary_data = []
+    
+    for module in modules:
+        total_lessons = db.query(models.Lesson).filter(models.Lesson.module_id == module.id).count()
+        progress_records = db.query(models.UserProgress).join(
+            models.Lesson, models.UserProgress.lesson_id == models.Lesson.id
+        ).filter(
+            models.Lesson.module_id == module.id,
+            models.UserProgress.user_id == user_id
+        ).all()
+        
+        lessons_started = len(progress_records)
+        
+        if total_lessons > 0 and lessons_started > 0:
+            total_reps = sum(p.repetitions for p in progress_records)
+            target_reps = total_lessons * 5 # Assumes 'Mastery' requires ~5 successful repetitions per lesson
+            mastery = (total_reps / target_reps) * 100
+            mastery_score = min(100.0, round(mastery, 1)) 
+        else:
+            mastery_score = 0.0
+            
+        summary_data.append({
+            "module_id": module.id,
+            "module_title": module.title,
+            "total_lessons": total_lessons,
+            "lessons_started": lessons_started,
+            "mastery_score": mastery_score
+        })
+        
+    return summary_data
+
+@app.get("/api/feed/smart", response_model=List[schemas.LessonResponse])
+def get_smart_feed(
+    db: Session = Depends(get_db),
+    current_user: ValidatedUser = Depends(get_current_user)
+):
+    """
+    The Smart Feed Discovery Algorithm.
+    Serves both the Discover Reels and the Training Room Queue.
+    Sorts lessons into three priority buckets:
+    1. Due Now (Review)
+    2. Never Seen (New)
+    3. Seen but not due (Fallback)
+    Applies module de-duplication to prevent subject fatigue.
+    """
+    user_id = current_user.id
+    today = date.today()
+
+    all_lessons = db.query(models.Lesson).all()
+    user_progress = db.query(models.UserProgress).filter(models.UserProgress.user_id == user_id).all()
+    
+    # Hash map for O(1) lookups
+    progress_map = {p.lesson_id: p.next_review_date for p in user_progress}
+
+    bucket_review = []    # Due now
+    bucket_new = []       # Never seen
+    bucket_fallback = []  # Seen, but not due yet
+
+    for lesson in all_lessons:
+        next_date = progress_map.get(lesson.id)
+        if next_date is None:
+            bucket_new.append(lesson)
+        elif next_date <= today:
+            bucket_review.append(lesson)
+        else:
+            bucket_fallback.append(lesson)
+
+    # Randomize within buckets to prevent predictable sequencing
+    random.shuffle(bucket_review)
+    random.shuffle(bucket_new)
+    random.shuffle(bucket_fallback)
+
+    raw_feed = bucket_review + bucket_new + bucket_fallback
+    
+    # Apply Diversity Filter (Ensure adjacent items are from different modules)
+    smart_feed = []
+    if raw_feed:
+        smart_feed.append(raw_feed.pop(0))
+        
+        while raw_feed:
+            last_mod_id = smart_feed[-1].module_id
+            found_diverse = False
+            
+            for i, lesson in enumerate(raw_feed):
+                if lesson.module_id != last_mod_id:
+                    smart_feed.append(raw_feed.pop(i))
+                    found_diverse = True
+                    break
+            
+            if not found_diverse:
+                smart_feed.append(raw_feed.pop(0))
+
+    return smart_feed
+
+# ==========================================
+# 6. ADMIN TENANT MANAGEMENT (PROTECTED)
+# ==========================================
+
+@app.get("/api/users", response_model=list[schemas.User])
+def get_all_users(db: Session = Depends(get_db), admin: models.User = Depends(get_admin_user)):
+    """Fetch all users mapped from Supabase to the local Postgres instance. Restricted to Admins."""
+    return db.query(models.User).all()
+
+@app.put("/api/users/{user_id}/role")
+def update_user_role(
+    user_id: str, 
+    role_update: dict, 
+    db: Session = Depends(get_db), 
+    admin: models.User = Depends(get_admin_user)
+):
+    """
+    Elevate or revoke an operator's privileges. 
+    Restricted to Admins.
+    """
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    new_role = role_update.get("role")
+    if new_role not in ["admin", "user"]:
+        raise HTTPException(status_code=400, detail="Invalid role specified.")
+        
+    user.role = new_role
+    db.commit()
+    return {"message": f"User {user.email} permissions updated to {new_role}."}
+
+@app.delete("/api/admin/users/{target_user_id}/progress")
+def wipe_user_progress(
+    target_user_id: str,
+    db: Session = Depends(get_db),
+    admin: models.User = Depends(get_admin_user)
+):
+    """
+    Sanction Protocol: Data Wipe.
+    Permanently erases all SM-2 tracking data and mastery progression for a specific user.
+    Does NOT delete their account or modify their access credentials.
+    Restricted to Admins.
+    """
+    # Verify the target user actually exists in the system
+    target_user = db.query(models.User).filter(models.User.id == target_user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Target user not found in the registry.")
+
+    # Execute the deletion of all progress records tied to their ID
+    deleted_count = db.query(models.UserProgress).filter(models.UserProgress.user_id == target_user_id).delete()
+    db.commit()
+
+    return {"message": f"Sanction Executed. {deleted_count} telemetry records wiped for user {target_user.email}."}

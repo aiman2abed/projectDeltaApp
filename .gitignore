@@ -28,3 +28,9 @@ Thumbs.db
 
 #logo
 *.png
+
+# Ignore data dumps and scripts
+chunk_*.txt
+frontend_review_chunk.txt
+master_dump.txt
+*.sh

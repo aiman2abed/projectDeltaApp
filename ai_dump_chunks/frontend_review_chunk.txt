@@ -1,0 +1,3261 @@
+==================== FRONTEND REVIEW CHUNK ====================
+This file intentionally repeats selected frontend files for focused code review.
+
+==================== FRONTEND TREE ====================
+./frontend/app
+./frontend/app/admin
+./frontend/app/admin/page.tsx
+./frontend/app/discover
+./frontend/app/discover/page.tsx
+./frontend/app/favicon.ico
+./frontend/app/globals.css
+./frontend/app/layout.tsx
+./frontend/app/lessons
+./frontend/app/lessons/[id]
+./frontend/app/lessons/[id]/page.tsx
+./frontend/app/login
+./frontend/app/login/page.tsx
+./frontend/app/modules
+./frontend/app/modules/[id]
+./frontend/app/modules/[id]/page.tsx
+./frontend/app/modules/page.tsx
+./frontend/app/page.tsx
+./frontend/app/review
+./frontend/app/review/page.tsx
+./frontend/app/settings
+./frontend/app/settings/page.tsx
+./frontend/app/signup
+./frontend/app/signup/page.tsx
+./frontend/app/update-password
+./frontend/app/update-password/page.tsx
+./frontend/src
+./frontend/src/components
+./frontend/src/components/AuthGuard.tsx
+./frontend/src/components/MasteryChart.tsx
+./frontend/src/components/MathRenderer.tsx
+./frontend/src/components/Navbar.tsx
+./frontend/src/components/OptimizedVideoPlayer.tsx
+./frontend/src/components/QuizEngine.tsx
+./frontend/src/lib
+./frontend/src/lib/supabase.ts
+./frontend/src/types
+./frontend/src/types/api.ts
+
+==================== FRONTEND FILE CONTENTS ====================
+
+
+==================== FILE: ./frontend/app/settings/page.tsx ====================
+
+"use client";
+
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+
+export default function SettingsPage() {
+  const [dailyLimit, setDailyLimit] = useState(50);
+  const [strictMode, setStrictMode] = useState(true);
+  const [notifications, setNotifications] = useState(true);
+  
+  const [userEmail, setUserEmail] = useState("");
+  const [userRole, setUserRole] = useState("User");
+  
+  const supabase = createClient();
+  const router = useRouter();
+
+  // Load user data and saved preferences
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+      
+      setUserEmail(session.user.email || "Unknown Identity");
+
+      try {
+         const res = await fetch("http://localhost:8000/api/users/me", {
+           headers: { Authorization: `Bearer ${session.access_token}` }
+         });
+         const data = await res.json();
+         setUserRole(data.role === 'admin' ? "Lead Engineer (Admin)" : "Engineering Student");
+      } catch (e) {
+         console.error(e);
+      }
+    };
+
+    fetchUserData();
+
+    // Load settings from local storage safely
+    const savedLimit = localStorage.getItem("spirelay_dailyLimit");
+    const savedStrict = localStorage.getItem("spirelay_strictMode");
+    const savedNotifs = localStorage.getItem("spirelay_notifications");
+
+    // 🛡️ DEFERRED UPDATE: Prevents React Strict Mode cascading renders
+    setTimeout(() => {
+      if (savedLimit) setDailyLimit(parseInt(savedLimit));
+      if (savedStrict !== null) setStrictMode(savedStrict === "true");
+      if (savedNotifs !== null) setNotifications(savedNotifs === "true");
+    }, 0);
+  }, [router, supabase]);
+
+  // --- SETTINGS ACTIONS ---
+
+  const handleSaveChanges = () => {
+    localStorage.setItem("spirelay_dailyLimit", dailyLimit.toString());
+    localStorage.setItem("spirelay_strictMode", strictMode.toString());
+    localStorage.setItem("spirelay_notifications", notifications.toString());
+    
+    // Simulate a successful network save
+    alert("SYSTEM UPDATED: Your configuration preferences have been saved.");
+  };
+
+  const handleSystemPurge = async () => {
+    if (confirm("CRITICAL WARNING: This will terminate your session and clear local caches. Proceed?")) {
+      localStorage.clear();
+      await supabase.auth.signOut();
+      router.push("/login");
+    }
+  };
+
+  return (
+    <div className="w-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-bold tracking-[0.2em] text-sky-400 uppercase mb-1">
+            Configuration
+          </p>
+          <h1 className="text-4xl font-extrabold text-white tracking-tight">
+            System Settings
+          </h1>
+        </div>
+        <button onClick={handleSaveChanges} className="px-6 py-2.5 rounded-xl text-sm font-bold text-slate-900 bg-sky-400 hover:bg-sky-300 shadow-[0_0_15px_rgba(56,189,248,0.4)] transition-all hover:-translate-y-0.5 active:translate-y-0">
+          Save Changes
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Left Column: Profile & Account */}
+        <div className="lg:col-span-1 flex flex-col gap-6">
+          
+          {/* Profile Card */}
+          <div className="glass-panel p-6 rounded-3xl flex flex-col gap-6 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 to-sky-400" />
+            
+            <div className="flex justify-between items-start">
+              <h2 className="text-xl font-bold text-white">Operator Profile</h2>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-slate-800 border-2 border-sky-400/30 flex items-center justify-center text-xl shadow-[0_0_15px_rgba(56,189,248,0.2)]">
+                👨‍💻
+              </div>
+              <div className="truncate">
+                <p className="text-lg font-bold text-white truncate max-w-[200px]">{userEmail.split('@')[0] || "..."}</p>
+                <p className="text-sm text-sky-400 font-medium">{userRole}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 mt-2">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Email Address</label>
+                <input 
+                  type="email" 
+                  value={userEmail}
+                  className="w-full px-4 py-2.5 bg-slate-800/50 border border-white/10 text-slate-300 rounded-xl focus:outline-none transition-all duration-200"
+                  readOnly
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Institution</label>
+                <input 
+                  type="text" 
+                  defaultValue="Tel Aviv University"
+                  className="w-full px-4 py-2.5 bg-slate-800/50 border border-white/10 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400/40 transition-all duration-200"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="glass-panel p-6 rounded-3xl border-red-500/20 flex flex-col gap-4">
+            <h2 className="text-xl font-bold text-red-400">Danger Zone</h2>
+            <p className="text-sm text-slate-400 mb-2">
+              Permanently erase your account, all memory decay data, and custom modules. This cannot be undone.
+            </p>
+            <button onClick={handleSystemPurge} className="w-full px-4 py-2.5 rounded-xl text-sm font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-colors">
+              Initiate System Purge
+            </button>
+          </div>
+        </div>
+
+        {/* Right Column: Engine Preferences */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <div className="glass-panel p-6 md:p-8 rounded-3xl flex flex-col gap-8 h-full">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              </div>
+              <h2 className="text-2xl font-bold text-white">SM-2 Engine Variables</h2>
+            </div>
+
+            {/* Setting 1 */}
+            <div className="flex items-center justify-between py-4 border-b border-white/5">
+              <div className="max-w-md">
+                <h3 className="text-lg font-semibold text-slate-200">Daily Review Limit</h3>
+                <p className="text-sm text-slate-400 mt-1">Maximum number of cards the algorithm will queue per 24-hour cycle to prevent burnout.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sky-400 font-mono font-bold">{dailyLimit}</span>
+                <input 
+                  type="range" 
+                  min="10" 
+                  max="200" 
+                  step="10"
+                  value={dailyLimit}
+                  onChange={(e) => setDailyLimit(parseInt(e.target.value))}
+                  className="w-32 accent-sky-400"
+                />
+              </div>
+            </div>
+
+            {/* Setting 2 */}
+            <div className="flex items-center justify-between py-4 border-b border-white/5">
+              <div className="max-w-md">
+                <h3 className="text-lg font-semibold text-slate-200">Strict Forgetting Curve</h3>
+                <p className="text-sm text-slate-400 mt-1">Penalizes late reviews more aggressively, resetting interval multipliers if missed by &gt;48h.</p>
+              </div>
+              <button 
+                onClick={() => setStrictMode(!strictMode)}
+                className={`w-14 h-7 flex items-center rounded-full p-1 transition-colors duration-300 ${strictMode ? 'bg-sky-500' : 'bg-slate-700'}`}
+              >
+                <div className={`bg-white w-5 h-5 rounded-full shadow-md transform transition-transform duration-300 ${strictMode ? 'translate-x-7' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            {/* Setting 3 */}
+            <div className="flex items-center justify-between py-4">
+              <div className="max-w-md">
+                <h3 className="text-lg font-semibold text-slate-200">Review Push Notifications</h3>
+                <p className="text-sm text-slate-400 mt-1">Receive browser alerts when optimal memory decay thresholds are reached.</p>
+              </div>
+              <button 
+                onClick={() => setNotifications(!notifications)}
+                className={`w-14 h-7 flex items-center rounded-full p-1 transition-colors duration-300 ${notifications ? 'bg-emerald-500' : 'bg-slate-700'}`}
+              >
+                <div className={`bg-white w-5 h-5 rounded-full shadow-md transform transition-transform duration-300 ${notifications ? 'translate-x-7' : 'translate-x-0'}`} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+==================== FILE: ./frontend/app/favicon.ico ====================
+
+[binary file omitted]
+
+
+==================== FILE: ./frontend/app/discover/page.tsx ====================
+
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import { createClient } from "@/lib/supabase";
+import MathRenderer from "@/components/MathRenderer";
+import OptimizedVideoPlayer from "@/components/OptimizedVideoPlayer"; // 🛡️ IMPORT NEW PLAYER
+
+type ReelAspect = "portrait" | "square" | "landscape";
+type ReelFit = "cover" | "contain";
+
+type Lesson = {
+  id: number;
+  module_id: number;
+  title: string;
+  content_text?: string;
+  content_math?: string;
+  video_url?: string | null;
+  video_aspect?: ReelAspect | null;
+  video_fit?: ReelFit | null;
+};
+
+const normalizeAspect = (aspect?: string | null): ReelAspect => {
+  if (aspect === "portrait" || aspect === "square" || aspect === "landscape") return aspect;
+  return "landscape";
+};
+
+const normalizeFit = (fit?: string | null): ReelFit => {
+  if (fit === "cover" || fit === "contain") return fit;
+  return "contain";
+};
+
+export default function DiscoverPage() {
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeReelIndex, setActiveReelIndex] = useState(0); 
+  const [isGlobalMuted, setIsGlobalMuted] = useState(true); // 🔊 NEW: Global mute state
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const supabase = createClient();
+
+  useEffect(() => {
+    const fetchSmartFeed = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const response = await fetch("http://localhost:8000/api/feed/smart", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        const data: Lesson[] = await response.json();
+        setLessons(data);
+      } catch (err) {
+        console.error("Feed Sync Failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void fetchSmartFeed();
+  }, [supabase]);
+
+  useEffect(() => {
+    if (lessons.length === 0) {
+      setActiveReelIndex(0);
+      return;
+    }
+    if (activeReelIndex > lessons.length - 1) {
+      setActiveReelIndex(lessons.length - 1);
+    }
+  }, [activeReelIndex, lessons]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    observerRef.current?.disconnect();
+    const sections = Array.from(container.querySelectorAll<HTMLElement>("[data-index]"));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = Number(entry.target.getAttribute("data-index"));
+            setActiveReelIndex((prev) => (prev === index ? prev : index));
+          }
+        });
+      },
+      { threshold: 0.6 }
+    );
+    observerRef.current = observer;
+
+    sections.forEach((section) => observer.observe(section));
+
+    return () => {
+      sections.forEach((section) => observer.unobserve(section));
+      observer.disconnect();
+    };
+  }, [lessons]);
+
+  const handleInject = async (lessonId: number) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    try {
+      await fetch(`http://localhost:8000/api/progress/${lessonId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ quality: 3 }),
+      });
+      alert("Payload Injected: This lesson is now in your SM-2 queue!");
+    } catch (err) {
+      console.error("Injection failed:", err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="w-full h-[80vh] flex flex-col items-center justify-center gap-4">
+        <div className="w-12 h-12 border-4 border-sky-500/30 border-t-sky-400 rounded-full animate-spin" />
+        <p className="font-mono text-sky-400 text-sm tracking-widest">SYNCING GLOBAL REELS...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="fixed inset-0 top-16 bg-black overflow-y-scroll snap-y snap-mandatory scrollbar-hide">
+      {lessons.map((lesson, index) => {
+        const aspect = normalizeAspect(lesson.video_aspect);
+        const fit = normalizeFit(lesson.video_fit);
+
+        const isActive = index === activeReelIndex;
+        const shouldMount = Math.abs(index - activeReelIndex) <= 1;
+
+        return (
+          <section
+            key={lesson.id}
+            data-index={index}
+            className="h-[calc(100vh-4rem)] w-full snap-start relative flex items-center justify-center overflow-hidden"
+          >
+            {lesson.video_url ? (
+               <OptimizedVideoPlayer
+                 url={lesson.video_url}
+                 aspect={aspect}
+                 fit={fit}
+                 isActive={isActive} 
+                 shouldMount={shouldMount}
+                 mode="feed"
+                 isGlobalMuted={isGlobalMuted} // 🔊 PASS DOWN GLOBAL MUTE STATE
+                 onToggleMute={() => setIsGlobalMuted(prev => !prev)} // 🔊 PASS DOWN MUTE TOGGLE HANDLER
+               />
+            ) : (
+              <div className="absolute inset-0 z-0 bg-[#0B0F19] relative overflow-hidden flex items-center justify-center">
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(56,189,248,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(56,189,248,0.05)_1px,transparent_1px)] bg-[size:40px_40px] animate-[pulse_4s_ease-in-out_infinite]" />
+                <div className="w-256 h-256 bg-sky-500/10 rounded-full blur-3xl" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+              </div>
+            )}
+
+            <div className="absolute right-6 bottom-40 z-20 flex flex-col gap-8 items-center pointer-events-auto">
+              <button onClick={() => handleInject(lesson.id)} className="group flex flex-col items-center gap-1">
+                <div className="w-14 h-14 rounded-full glass-panel flex items-center justify-center border-sky-500/50 shadow-[0_0_20px_rgba(56,189,248,0.3)] group-hover:scale-110 transition-all duration-300">
+                  <span className="text-2xl">⚡</span>
+                </div>
+                <span className="text-[10px] font-bold text-sky-400 uppercase tracking-tighter">Inject</span>
+              </button>
+            </div>
+
+            <div className="relative z-10 w-full max-w-2xl px-8 flex flex-col justify-end h-full pb-10 pointer-events-none">
+              <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-10 duration-700">
+                <div className="flex items-center gap-3 pointer-events-auto w-max">
+                  <span className="px-3 py-1 bg-sky-500 text-white text-[10px] font-black uppercase tracking-widest rounded shadow-[0_0_15px_rgba(56,189,248,0.5)]">
+                    Module Node: {lesson.module_id}
+                  </span>
+                </div>
+                <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight text-glow pointer-events-auto w-max">
+                  {lesson.title}
+                </h2>
+                {lesson.content_math && shouldMount && (
+                  <div className="glass-panel border-sky-500/30 rounded-2xl w-full max-w-lg pointer-events-auto overflow-hidden">
+                    <div className="bg-sky-500/10 px-4 py-2 border-b border-sky-500/20">
+                      <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">Math Payload</p>
+                    </div>
+                    <div className="p-4 text-lg md:text-xl font-mono text-white text-center">
+                      <MathRenderer formula={lesson.content_math} />
+                    </div>
+                  </div>
+                )}
+                <p className="text-slate-300 text-sm md:text-base leading-relaxed max-w-lg pointer-events-auto drop-shadow-md pb-6">
+                  {lesson.content_text}
+                </p>
+              </div>
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+
+==================== FILE: ./frontend/app/signup/page.tsx ====================
+
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase";
+import Link from "next/link";
+import Image from "next/image";
+
+export default function SignupPage() {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const router = useRouter();
+  const supabase = createClient();
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    // Pass the names into the Supabase user_metadata
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+        }
+      }
+    });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+    } else {
+      router.push("/");
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex bg-slate-900">
+      {/* LEFT SIDE: Brand / Graphic */}
+      <div className="hidden lg:flex lg:w-1/2 bg-white relative overflow-hidden items-center justify-center">
+        <div className="absolute left-10 top-0 h-full w-[2px] bg-red-300/60 pointer-events-none z-10" />
+        <div className="absolute right-0 top-0 h-full w-px bg-slate-200/70 pointer-events-none z-10" />
+        <div className="absolute left-[18%] top-[22%] h-72 w-72 rounded-full bg-indigo-600/20 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-[-8%] left-[-8%] h-80 w-80 rounded-full bg-emerald-600/20 blur-3xl pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(15,23,42,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.035)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+
+        <div className="relative z-20 px-12 py-16 max-w-xl text-center -translate-y-6">
+          <div className="flex justify-center mb-4">
+            <div className="drop-shadow-[0_0_24px_rgba(99,102,241,0.18)]">
+              <div className="w-72 xl:w-[24rem] mx-auto">
+                <Image
+                  src="/spirelay_logo_noBg.png"
+                  alt="Spirelay Logo"
+                  width={900}
+                  height={900}
+                  className="object-contain w-full h-auto"
+                  priority
+                />
+              </div>
+            </div>
+          </div>
+          <p className="text-[15px] font-bold tracking-[0.18em] text-emerald-600 uppercase mb-6">
+            Adaptive Engineering Memory
+          </p>
+          <p className="max-w-lg mx-auto text-lg text-slate-800 font-large leading-8">
+            reel after reel, short after short, how many engineering concepts can you "export"?<br></br>
+            The intelligent platform for building long-term memory in Electrical Engineering.
+          </p>
+        </div>
+      </div>
+
+      {/* RIGHT SIDE: Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center lg:items-start p-8 sm:p-12 lg:pt-28 bg-slate-900 relative overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-700/70 rounded-full blur-3xl opacity-50 pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-emerald-500/40 rounded-full blur-3xl opacity-40 pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+
+        <div className="w-full max-w-md relative z-10">
+          <div className="lg:hidden mb-8 text-center">
+            <div className="w-28 mx-auto mb-4">
+              <Image src="/spirelay_logo_noBg.png" alt="Spirelay Logo" width={220} height={220} className="object-contain w-full h-auto" priority />
+            </div>
+            <p className="text-xs font-bold tracking-[0.18em] text-indigo-400 uppercase">Spirelay</p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 sm:p-10 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+            <div className="mb-8 text-center lg:text-left">
+              <p className="text-xs font-bold tracking-[0.2em] text-emerald-300 uppercase mb-3">Join Spirelay</p>
+              <h2 className="text-3xl font-extrabold text-white tracking-tight">Create your account</h2>
+            </div>
+
+            <form className="space-y-5" onSubmit={handleSignup}>
+              
+              {/* Name Fields Row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-200 mb-1.5">First Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/10 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all placeholder:text-slate-400"
+                    placeholder="Ada"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-200 mb-1.5">Last Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/10 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all placeholder:text-slate-400"
+                    placeholder="Lovelace"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-200 mb-1.5">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/10 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all placeholder:text-slate-400"
+                  placeholder="engineer@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-200 mb-1.5">Password</label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/10 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all placeholder:text-slate-400"
+                  placeholder="Min. 6 characters"
+                />
+              </div>
+
+              {error && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-300 text-sm font-semibold flex items-center">
+                  <span className="mr-2">⚠️</span>{error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex justify-center py-4 px-4 rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-emerald-500 hover:from-indigo-500 hover:to-emerald-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:-translate-y-0.5 active:translate-y-0 mt-2"
+              >
+                {loading ? "Creating Account..." : "Create Account"}
+              </button>
+            </form>
+
+            <div className="mt-6 text-center text-sm">
+              <p className="text-slate-300 font-medium">
+                Already have an account?{" "}
+                <Link href="/login" className="text-indigo-300 font-bold hover:text-emerald-300 transition-colors">
+                  Sign in here
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+==================== FILE: ./frontend/app/admin/page.tsx ====================
+
+"use client";
+
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+
+type ModalState = {
+  isOpen: boolean;
+  mode: "new_module" | "edit_module" | "new_lesson";
+  targetId?: number;
+};
+
+type BanModalState = {
+  isOpen: boolean;
+  userId: string;
+  userEmail: string;
+};
+
+type Module = {
+  id: number;
+  title: string;
+  description?: string | null;
+};
+
+type UserRow = {
+  id: string;
+  email: string;
+  role: string;
+  first_name?: string | null;
+  last_name?: string | null;
+};
+
+export default function AdminPage() {
+  const [activeTab, setActiveTab] = useState<"modules" | "users">("modules");
+  const [modules, setModules] = useState<Module[]>([]);
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Dynamic Modal State (Modules/Lessons)
+  const [modal, setModal] = useState<ModalState>({ isOpen: false, mode: "new_module" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sanction/Ban Modal State
+  const [banModal, setBanModal] = useState<BanModalState>({ isOpen: false, userId: "", userEmail: "" });
+  const [banAction, setBanAction] = useState<"temp" | "perma" | "delete">("temp");
+  const [isBanning, setIsBanning] = useState(false);
+
+  // Unified Form State
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    parentModuleId: "",
+    contentText: "",
+    contentMath: "",
+    videoUrl: ""
+  });
+
+  const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+
+      try {
+        const meRes = await fetch("http://localhost:8000/api/users/me", {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        });
+        const meData = await meRes.json();
+        
+        if (meData.role !== "admin") {
+          alert("SECURITY PROTOCOL: Unauthorized Access.");
+          router.push("/");
+          return;
+        }
+
+        const [modRes, usersRes] = await Promise.all([
+          fetch("http://localhost:8000/api/modules", { headers: { Authorization: `Bearer ${session.access_token}` } }),
+          fetch("http://localhost:8000/api/users", { headers: { Authorization: `Bearer ${session.access_token}` } })
+        ]);
+
+        setModules(await modRes.json());
+        setUsers(await usersRes.json());
+      } catch (err) {
+        console.error("Admin fetch failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAdminData();
+  }, [router, supabase]);
+
+  // --- MODAL CONTROLS ---
+
+  const openNewModule = () => {
+    setForm({ title: "", description: "", parentModuleId: "", contentText: "", contentMath: "", videoUrl: "" });
+    setModal({ isOpen: true, mode: "new_module" });
+  };
+
+  const openEditModule = (mod: Module) => {
+    setForm({ ...form, title: mod.title, description: mod.description || "" });
+    setModal({ isOpen: true, mode: "edit_module", targetId: mod.id });
+  };
+
+  const openNewLesson = (moduleId?: number) => {
+    setForm({ ...form, title: "", contentText: "", contentMath: "", videoUrl: "", parentModuleId: moduleId ? moduleId.toString() : (modules[0]?.id.toString() || "") });
+    setModal({ isOpen: true, mode: "new_lesson" });
+  };
+
+  const handleCloseModal = () => {
+    setModal({ isOpen: false, mode: "new_module" });
+  };
+
+  const openBanModal = (userId: string, userEmail: string) => {
+    setBanModal({ isOpen: true, userId, userEmail });
+    setBanAction("temp"); // Reset to default safely
+  };
+
+  const closeBanModal = () => {
+    setBanModal({ isOpen: false, userId: "", userEmail: "" });
+  };
+
+  // --- ACTION HANDLERS ---
+
+  const handleExportLogs = () => {
+    const dataToExport = activeTab === "modules" ? modules : users;
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataToExport, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `spirelay_${activeTab}_export.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
+  const handleModalSubmit = async () => {
+    if (!form.title.trim()) {
+      alert("Title is required.");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    try {
+      if (modal.mode === "new_module") {
+        const res = await fetch("http://localhost:8000/api/modules", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ title: form.title, description: form.description })
+        });
+        if (res.ok) setModules([...modules, await res.json()]);
+
+      } else if (modal.mode === "edit_module") {
+        const res = await fetch(`http://localhost:8000/api/modules/${modal.targetId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ title: form.title, description: form.description })
+        });
+        if (res.ok) {
+          const updatedMod = await res.json();
+          setModules(modules.map(m => m.id === modal.targetId ? updatedMod : m));
+        }
+
+      } else if (modal.mode === "new_lesson") {
+        if (!form.parentModuleId || !form.contentText) {
+          alert("Module and Content Text are required for a lesson.");
+          setIsSubmitting(false);
+          return;
+        }
+        const res = await fetch("http://localhost:8000/api/lessons", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ 
+            module_id: parseInt(form.parentModuleId), 
+            title: form.title, 
+            content_text: form.contentText,
+            content_math: form.contentMath || null,
+            video_url: form.videoUrl || null
+          })
+        });
+        if (res.ok) alert("Lesson Payload successfully injected into Module!");
+      }
+      
+      handleCloseModal();
+    } catch (err) {
+      console.error("Submit failed", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteModule = async (id: number) => {
+    if (!confirm("CRITICAL WARNING: This will permanently delete the module and ALL associated lessons. Proceed?")) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    try {
+      const res = await fetch(`http://localhost:8000/api/modules/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (res.ok) {
+        setModules(modules.filter(m => m.id !== id));
+      }
+    } catch (err) {
+      console.error("Deletion failed", err);
+    }
+  };
+
+  const handleManageUser = async (userId: string, currentRole: string) => {
+    const newRole = prompt(`Change role for user ${userId}? (Type 'admin' or 'user')`, currentRole);
+    if (!newRole || newRole === currentRole || !['admin', 'user'].includes(newRole)) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    try {
+      const res = await fetch(`http://localhost:8000/api/users/${userId}/role`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ role: newRole })
+      });
+      if (res.ok) {
+        setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      }
+    } catch (err) {
+      console.error("Role update failed", err);
+    }
+  };
+
+  // 🛡️ NEW: Wipe User Progress Handler
+  const handleWipeProgress = async (userId: string, userEmail: string) => {
+    if (!confirm(`CRITICAL WARNING: This will completely erase all SM-2 learning telemetry and mastery progress for ${userEmail}. Their account and role will remain intact. Proceed?`)) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    try {
+      // You will need to implement this endpoint on your FastAPI backend
+      const res = await fetch(`http://localhost:8000/api/admin/users/${userId}/progress`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      
+      if (res.ok) {
+        alert(`Telemetry successfully wiped for ${userEmail}.`);
+      } else {
+        alert(`Failed to wipe telemetry for ${userEmail}. Check backend logs.`);
+      }
+    } catch (err) {
+      console.error("Progress wipe failed", err);
+    }
+  };
+
+  const executeSanction = async () => {
+    setIsBanning(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    try {
+      if (banAction === "delete" && session) {
+         // await fetch(`http://localhost:8000/api/users/${banModal.userId}`, { method: "DELETE", ... })
+         setUsers(users.filter(u => u.id !== banModal.userId));
+      } else {
+         alert(`User ${banModal.userEmail} has received a ${banAction} ban.`);
+      }
+      
+      closeBanModal();
+    } catch (err) {
+      console.error("Sanction failed", err);
+    } finally {
+      setIsBanning(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="p-10 text-red-500 font-mono animate-pulse">VERIFYING ADMIN CREDENTIALS...</div>;
+  }
+
+  return (
+    <div className="w-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
+      
+      {/* 🚀 DYNAMIC INJECTION MODAL (Modules & Lessons) */}
+      {modal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in zoom-in duration-300">
+          <div className="glass-panel w-full max-w-2xl rounded-3xl p-8 border border-sky-500/30 shadow-[0_0_40px_rgba(56,189,248,0.15)] flex flex-col gap-6 relative overflow-hidden max-h-[90vh] overflow-y-auto">
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-sky-500/20 rounded-full blur-3xl pointer-events-none" />
+            
+            <div>
+              <h2 className="text-2xl font-black text-white text-glow mb-1">
+                {modal.mode === "new_module" && "Initialize New Module"}
+                {modal.mode === "edit_module" && "Reconfigure Module"}
+                {modal.mode === "new_lesson" && "Inject Lesson Payload"}
+              </h2>
+              <p className="text-sm text-slate-400">
+                {modal.mode === "new_lesson" ? "Deploy a specific flashcard or video into a module." : "Manage high-level curriculum categories."}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-4 relative z-10">
+              {modal.mode === "new_lesson" && (
+                <div>
+                  <label className="block text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-2">Target Module Node</label>
+                  <select 
+                    value={form.parentModuleId}
+                    onChange={(e) => setForm({ ...form, parentModuleId: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-white/10 text-white rounded-xl focus:outline-none focus:border-sky-500/50 appearance-none"
+                  >
+                    <option value="" disabled>Select a target module...</option>
+                    {modules.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-2">Title / Designation</label>
+                <input 
+                  type="text" 
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="e.g., CMOS Logic Fundamentals"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-white/10 text-white rounded-xl focus:outline-none focus:border-sky-500/50 transition-all placeholder:text-slate-600"
+                />
+              </div>
+
+              {(modal.mode === "new_module" || modal.mode === "edit_module") && (
+                <div>
+                  <label className="block text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-2">Description</label>
+                  <textarea 
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-white/10 text-white rounded-xl focus:outline-none focus:border-sky-500/50 transition-all placeholder:text-slate-600 resize-none"
+                  />
+                </div>
+              )}
+
+              {modal.mode === "new_lesson" && (
+                <>
+                  <div>
+                    <label className="block text-[10px] font-bold text-sky-400 uppercase tracking-widest mb-2">Content Text (Front)</label>
+                    <textarea 
+                      value={form.contentText}
+                      onChange={(e) => setForm({ ...form, contentText: e.target.value })}
+                      placeholder="The main concept or question..."
+                      rows={3}
+                      className="w-full px-4 py-3 bg-slate-900/50 border border-white/10 text-white rounded-xl focus:outline-none focus:border-sky-500/50 transition-all placeholder:text-slate-600 resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-2">Content Math (LaTeX / Back)</label>
+                    <input 
+                      type="text" 
+                      value={form.contentMath}
+                      onChange={(e) => setForm({ ...form, contentMath: e.target.value })}
+                      placeholder="e.g., V_{out} = D \cdot V_{in}"
+                      className="w-full px-4 py-3 bg-slate-900/50 border border-white/10 text-white rounded-xl font-mono text-sm focus:outline-none focus:border-amber-500/50 transition-all placeholder:text-slate-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-fuchsia-400 uppercase tracking-widest mb-2">Media URL (Video/Reel)</label>
+                    <input 
+                      type="text" 
+                      value={form.videoUrl}
+                      onChange={(e) => setForm({ ...form, videoUrl: e.target.value })}
+                      placeholder="YouTube URL or .mp4 link"
+                      className="w-full px-4 py-3 bg-slate-900/50 border border-white/10 text-white rounded-xl focus:outline-none focus:border-fuchsia-500/50 transition-all placeholder:text-slate-600"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-2 relative z-10 pt-4 border-t border-white/5">
+              <button onClick={handleCloseModal} className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+                Abort
+              </button>
+              <button onClick={handleModalSubmit} disabled={isSubmitting} className="px-6 py-2.5 rounded-xl text-sm font-bold text-slate-900 bg-sky-400 hover:bg-sky-300 shadow-[0_0_15px_rgba(56,189,248,0.4)] transition-all hover:-translate-y-0.5 disabled:opacity-50 flex items-center gap-2">
+                {isSubmitting ? "Executing..." : "Confirm Transmit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🚨 SANCTION / BAN MODAL */}
+      {banModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in zoom-in duration-300">
+          <div className="glass-panel w-full max-w-lg rounded-3xl p-8 border border-red-500/50 shadow-[0_0_50px_rgba(239,68,68,0.2)] flex flex-col gap-6 relative overflow-hidden">
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-red-500/20 rounded-full blur-3xl pointer-events-none" />
+            
+            <div>
+              <h2 className="text-2xl font-black text-white mb-1 flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></span>
+                Sanction Protocol
+              </h2>
+              <p className="text-sm text-slate-400">Target Tenant: <span className="font-bold text-white">{banModal.userEmail}</span></p>
+            </div>
+
+            <div className="flex flex-col gap-4 relative z-10">
+              <label className="block text-[10px] font-bold text-red-400 uppercase tracking-widest">Select Protocol Level</label>
+              
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={() => setBanAction("temp")}
+                  className={`p-4 rounded-xl text-left border transition-all ${banAction === "temp" ? "bg-amber-500/10 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.2)]" : "bg-slate-900/50 border-white/10 hover:border-amber-500/30"}`}
+                >
+                  <span className="block text-sm font-bold text-amber-400 mb-1">Temporary Suspension</span>
+                  <span className="block text-xs text-slate-400">Revoke tenant access for 72 hours.</span>
+                </button>
+
+                <button 
+                  onClick={() => setBanAction("perma")}
+                  className={`p-4 rounded-xl text-left border transition-all ${banAction === "perma" ? "bg-red-500/10 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.2)]" : "bg-slate-900/50 border-white/10 hover:border-red-500/30"}`}
+                >
+                  <span className="block text-sm font-bold text-red-400 mb-1">Permanent Ban</span>
+                  <span className="block text-xs text-slate-400">Lock account permanently. Data remains in database.</span>
+                </button>
+
+                <button 
+                  onClick={() => setBanAction("delete")}
+                  className={`p-4 rounded-xl text-left border transition-all ${banAction === "delete" ? "bg-red-900/40 border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.4)]" : "bg-slate-900/50 border-white/10 hover:border-red-500/30"}`}
+                >
+                  <span className="block text-sm font-bold text-red-500 mb-1">Total Eradication (Delete)</span>
+                  <span className="block text-xs text-slate-400">Completely wipe user and all SM-2 progress from the server.</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-4 relative z-10">
+              <button onClick={closeBanModal} className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
+                Cancel
+              </button>
+              <button onClick={executeSanction} disabled={isBanning} className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-red-600 hover:bg-red-500 shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all hover:-translate-y-0.5 disabled:opacity-50 flex items-center gap-2">
+                {isBanning ? "Processing..." : "Execute Sanction"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header & Global Actions */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mt-8">
+        <div>
+          <p className="text-sm font-bold tracking-[0.2em] text-red-400 uppercase mb-1 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            Super-User Access
+          </p>
+          <h1 className="text-4xl font-extrabold text-white tracking-tight">
+            Database Terminal
+          </h1>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={() => openNewLesson()} className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-300 bg-slate-800 border border-white/10 hover:bg-slate-700 transition-colors hidden md:block">
+            + Quick Lesson
+          </button>
+          <button onClick={() => openNewModule()} className="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-all hover:-translate-y-0.5">
+            + New Module
+          </button>
+        </div>
+      </div>
+
+      {/* High-Level System Telemetry */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="glass-panel p-5 rounded-2xl border-t-2 border-t-sky-400 flex flex-col gap-1">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">System Status</span>
+          <span className="text-xl font-bold text-emerald-400">Operational</span>
+        </div>
+        <div className="glass-panel p-5 rounded-2xl flex flex-col gap-1">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Total Tenants</span>
+          <span className="text-xl font-bold text-white">{users.length}</span>
+        </div>
+        <div className="glass-panel p-5 rounded-2xl flex flex-col gap-1">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Active Modules</span>
+          <span className="text-xl font-bold text-white">{modules.length}</span>
+        </div>
+        <div className="glass-panel p-5 rounded-2xl flex flex-col gap-1">
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Database Ping</span>
+          <span className="text-xl font-bold text-white">12ms</span>
+        </div>
+      </div>
+
+      {/* Main Terminal Area */}
+      <div className="glass-panel rounded-3xl flex flex-col overflow-hidden border border-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
+        
+        {/* Terminal Tabs */}
+        <div className="flex border-b border-white/5 bg-slate-900/50">
+          <button 
+            onClick={() => setActiveTab("modules")}
+            className={`px-8 py-4 text-sm font-bold uppercase tracking-wider transition-all duration-300 ${activeTab === "modules" ? "text-sky-400 border-b-2 border-sky-400 bg-white/5" : "text-slate-500 hover:text-slate-300 hover:bg-white/5"}`}
+          >
+            Curriculum Modules
+          </button>
+          <button 
+            onClick={() => setActiveTab("users")}
+            className={`px-8 py-4 text-sm font-bold uppercase tracking-wider transition-all duration-300 ${activeTab === "users" ? "text-sky-400 border-b-2 border-sky-400 bg-white/5" : "text-slate-500 hover:text-slate-300 hover:bg-white/5"}`}
+          >
+            Tenant Management
+          </button>
+        </div>
+
+        {/* Data Table */}
+        <div className="p-0 overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-white/5 bg-slate-800/30 text-xs uppercase tracking-widest text-slate-500">
+                <th className="p-4 font-bold w-16">ID</th>
+                <th className="p-4 font-bold">{activeTab === "modules" ? "Module Title" : "Operator Email"}</th>
+                <th className="p-4 font-bold">{activeTab === "modules" ? "Description" : "Role"}</th>
+                <th className="p-4 font-bold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5 text-sm">
+              
+              {/* Modules View */}
+              {activeTab === "modules" && modules.map((mod) => (
+                <tr key={mod.id} className="hover:bg-white/5 transition-colors group">
+                  <td className="p-4 text-slate-500 font-mono">{mod.id}</td>
+                  <td className="p-4 text-white font-medium group-hover:text-sky-300 transition-colors">{mod.title}</td>
+                  <td className="p-4 text-slate-400 truncate max-w-[200px] md:max-w-md">{mod.description || "N/A"}</td>
+                  <td className="p-4 flex justify-end gap-2">
+                    <button 
+                      onClick={() => openNewLesson(mod.id)} 
+                      className="px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-white bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors border border-white/5"
+                    >
+                      + Lesson
+                    </button>
+                    <button 
+                      onClick={() => openEditModule(mod)} 
+                      className="p-2 text-slate-400 hover:text-sky-400 transition-colors rounded-lg hover:bg-sky-500/10"
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteModule(mod.id)} 
+                      className="p-2 text-slate-400 hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/10"
+                    >
+                      Del
+                    </button>
+                  </td>
+                </tr>
+              ))}
+
+              {/* Users View */}
+              {activeTab === "users" && users.map((user) => (
+                <tr key={user.id} className="hover:bg-white/5 transition-colors group">
+                  <td className="p-4 text-slate-500 font-mono truncate max-w-[80px]">{user.id}</td>
+                  <td className="p-4 text-white font-medium group-hover:text-sky-300 transition-colors">{user.email}</td>
+                  <td className="p-4">
+                    <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full border ${user.role === 'admin' ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-blue-400 bg-blue-500/10 border-blue-500/20'}`}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td className="p-4 flex justify-end gap-2">
+                    {/* 🛡️ NEW: Wipe Progress Button */}
+                    <button 
+                      onClick={() => handleWipeProgress(user.id, user.email)} 
+                      className="p-2 text-amber-500 hover:text-amber-400 transition-colors rounded-lg hover:bg-amber-500/10"
+                      title="Erase all SM-2 progress for this user"
+                    >
+                      Wipe Progress
+                    </button>
+                    <button 
+                      onClick={() => handleManageUser(user.id, user.role)} 
+                      className="p-2 text-slate-400 hover:text-sky-400 transition-colors rounded-lg hover:bg-sky-500/10"
+                    >
+                      Manage
+                    </button>
+                    <button 
+                      onClick={() => openBanModal(user.id, user.email)} 
+                      className="p-2 text-slate-400 hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/10"
+                    >
+                      Ban
+                    </button>
+                  </td>
+                </tr>
+              ))}
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+==================== FILE: ./frontend/app/update-password/page.tsx ====================
+
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase";
+import Image from "next/image";
+
+export default function UpdatePasswordPage() {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [isSessionReady, setIsSessionReady] = useState(false); 
+
+  // Hardware lock to prevent React Strict Mode / Brave from burning the single-use code twice
+  const exchangeLock = useRef(false); 
+
+  const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const initializeSession = async () => {
+      // 1. Give Supabase's internal PKCE handler a split second to work automatically
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // 2. Check if Supabase successfully logged us in automatically!
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        if (isMounted) {
+          setIsSessionReady(true);
+          setError(null); // Wipe any false-positive errors
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        return; // EXIT EARLY! Do not attempt manual exchange.
+      }
+
+      // 3. If no session, check the URL for errors or codes
+      const urlParams = new URLSearchParams(window.location.search);
+      const errorDesc = urlParams.get("error_description");
+      const code = urlParams.get("code");
+
+      if (errorDesc && isMounted) {
+        setError(errorDesc.replace(/\+/g, " "));
+        return;
+      }
+
+      // 4. Try manual exchange ONLY if automatic failed or didn't run
+      if (code && !exchangeLock.current && isMounted) {
+        exchangeLock.current = true;
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (exchangeError && isMounted) {
+          setError("Recovery link is invalid or has expired. Please request a new one.");
+        } else if (isMounted) {
+          setIsSessionReady(true);
+          setError(null);
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      } else if (isMounted && !isSessionReady) {
+        setError("Waiting for secure session initialization... If this persists, the link is expired.");
+      }
+    };
+
+    // 5. Fallback Listener: If the session initializes late, catch it and wipe the error
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && isMounted) {
+        setIsSessionReady(true);
+        setError(null);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    });
+
+    initializeSession();
+
+    return () => {
+      isMounted = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, [supabase.auth]);
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!isSessionReady) {
+      setError("Secure session not established. Please click the link in your email again.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+
+    if (password !== confirmPassword) {
+      setError("Encryption keys do not match. Please verify your new password.");
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      setLoading(false);
+      return;
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: password,
+    });
+
+    if (updateError) {
+      setError(updateError.message);
+      setLoading(false);
+    } else {
+      setMessage("Keys successfully updated. Redirecting to Command Center...");
+      setTimeout(() => {
+        router.push("/");
+      }, 2000);
+    }
+  };
+
+  const handleRemembered = async () => {
+    // If they remembered it, sign them out of this temporary recovery session and send to login
+    await supabase.auth.signOut();
+    alert("There you go, you remember your password, no need to change it!");
+    router.push("/login");
+  };
+
+  return (
+    <div className="min-h-screen flex bg-slate-900">
+      {/* LEFT SIDE: Brand / Graphic */}
+      <div className="hidden lg:flex lg:w-1/2 bg-white relative overflow-hidden items-center justify-center">
+        <div className="absolute left-10 top-0 h-full w-[2px] bg-red-300/60 pointer-events-none z-10" />
+        <div className="absolute right-0 top-0 h-full w-px bg-slate-200/70 pointer-events-none z-10" />
+        
+        {/* Amber/Red glows to signify a security override event */}
+        <div className="absolute left-[18%] top-[22%] h-72 w-72 rounded-full bg-amber-500/20 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-[-8%] left-[-8%] h-80 w-80 rounded-full bg-red-500/10 blur-3xl pointer-events-none" />
+        
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(15,23,42,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.035)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+
+        <div className="relative z-20 px-12 py-16 max-w-xl text-center -translate-y-6">
+          <div className="flex justify-center mb-4">
+            <div className="drop-shadow-[0_0_24px_rgba(245,158,11,0.2)]">
+              <div className="w-72 xl:w-[24rem] mx-auto">
+                <Image
+                  src="/spirelay_logo_noBg.png"
+                  alt="Spirelay Logo"
+                  width={900}
+                  height={900}
+                  className="object-contain w-full h-auto"
+                  priority
+                />
+              </div>
+            </div>
+          </div>
+
+          <p className="text-[15px] font-bold tracking-[0.18em] text-amber-500 uppercase mb-6 flex items-center justify-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+            Security Override
+          </p>
+
+          <p className="max-w-lg mx-auto text-lg text-slate-800 font-large leading-8">
+            Your identity has been verified via secure email link. <br/>
+            Please establish a new encryption key to restore terminal access.
+          </p>
+        </div>
+      </div>
+
+      {/* RIGHT SIDE: Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center lg:items-start p-8 sm:p-12 lg:pt-32 bg-slate-900 relative overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-amber-600/30 rounded-full blur-3xl opacity-50 pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-sky-500/20 rounded-full blur-3xl opacity-40 pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+
+        <div className="w-full max-w-md relative z-10">
+          <div className="lg:hidden mb-8 text-center">
+            <div className="w-28 mx-auto mb-4">
+              <Image src="/spirelay_logo_noBg.png" alt="Spirelay Logo" width={220} height={220} className="object-contain w-full h-auto" priority />
+            </div>
+            <p className="text-xs font-bold tracking-[0.18em] text-amber-400 uppercase">Spirelay</p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 sm:p-10 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+            <div className="mb-10 text-center lg:text-left">
+              <p className="text-xs font-bold tracking-[0.2em] text-amber-400 uppercase mb-3">Key Recovery</p>
+              <h2 className="text-3xl font-extrabold text-white tracking-tight">Reset Password</h2>
+            </div>
+
+            <form className="space-y-6" onSubmit={handleUpdatePassword}>
+              <div>
+                <label className="block text-sm font-bold text-slate-200 mb-1.5">New Password</label>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3.5 bg-white/10 border border-white/10 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-400/50 transition-all duration-200 placeholder:text-slate-400"
+                  placeholder="Min. 6 characters"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-200 mb-1.5">Confirm New Password</label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-3.5 bg-white/10 border border-white/10 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-400/50 transition-all duration-200 placeholder:text-slate-400"
+                  placeholder="Re-type password"
+                />
+              </div>
+
+              {error && !isSessionReady && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-300 text-sm font-semibold flex items-center">
+                  <span className="mr-2">⚠️</span>{error}
+                </div>
+              )}
+              
+              {message && (
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-300 text-sm font-semibold flex items-center">
+                  <span className="mr-2">✅</span>{message}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={loading || !!message || !isSessionReady} 
+                  className="w-full flex justify-center py-4 px-4 rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.2)] text-sm font-bold text-slate-900 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  {loading ? "Encrypting..." : isSessionReady ? "Update Keys" : "Initializing Session..."}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleRemembered}
+                  className="w-full flex justify-center py-3 px-4 rounded-xl text-sm font-bold text-slate-400 bg-transparent border border-white/10 hover:bg-white/5 hover:text-white transition-colors"
+                >
+                  Abort: I remembered my password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+==================== FILE: ./frontend/app/review/page.tsx ====================
+
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase";
+import MathRenderer from "@/components/MathRenderer";
+import QuizEngine from "@/components/QuizEngine";
+
+type ReviewLesson = {
+  id: number;
+  module_id: number;
+  title: string;
+  content_text: string;
+  content_math?: string | null;
+  quiz_question?: string | null;
+  quiz_options?: string[] | null;
+  correct_answer?: string | null;
+};
+
+export default function ReviewPage() {
+  const [queue, setQueue] = useState<ReviewLesson[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  // States for the active card's interaction mode
+  const [isRevealed, setIsRevealed] = useState(false); // True when showing the passive answer
+  const [activeMode, setActiveMode] = useState<"decision" | "quiz" | "reveal">("decision");
+  
+  const [loading, setLoading] = useState(true);
+  const [sessionComplete, setSessionComplete] = useState(false);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    const fetchQueue = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      try {
+        const response = await fetch("http://localhost:8000/api/feed/smart", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        const data = await response.json();
+        setQueue(data);
+      } catch (err) {
+        console.error("Queue fetch failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchQueue();
+  }, [supabase]);
+
+  const currentLesson = queue[currentIndex];
+
+  const advanceCard = () => {
+    // Reset states for the next card
+    setIsRevealed(false);
+    setActiveMode("decision");
+    
+    if (currentIndex < queue.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    } else {
+      setSessionComplete(true);
+    }
+  };
+
+  // SM-2 Submission for PASSIVE REVEAL Mode
+  const handleRevealRating = async (quality: number) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session || !currentLesson) return;
+
+    try {
+      await fetch(`http://localhost:8000/api/progress/${currentLesson.id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ quality }), // 0 Mastery Progress awarded internally for passive reveals
+      });
+      advanceCard();
+    } catch (err) {
+      console.error("Update failed:", err);
+    }
+  };
+
+  // SM-2 Submission for ACTIVE QUIZ Mode
+  const handleQuizSuccess = async (isFirstTry: boolean) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session || !currentLesson) return;
+
+    // High risk, high reward. If they get it first try, they get a 4 (Good).
+    // If they missed it once but eventually got it, they get a 2 (Hard/Passable).
+    const quality = isFirstTry ? 4 : 2; 
+
+    try {
+      await fetch(`http://localhost:8000/api/progress/${currentLesson.id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ quality }), // Full Mastery Progress awarded!
+      });
+      advanceCard();
+    } catch (err) {
+      console.error("Quiz sync failed:", err);
+    }
+  };
+
+  if (loading) return <div className="p-10 text-center text-sky-400 font-mono animate-pulse mt-12">LOADING NEURAL QUEUE...</div>;
+
+  if (sessionComplete || queue.length === 0) {
+    return (
+      <div className="w-full flex-1 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
+        <div className="glass-panel p-12 rounded-3xl text-center max-w-lg border border-sky-500/30 shadow-[0_0_30px_rgba(56,189,248,0.1)]">
+          <h2 className="text-3xl font-extrabold text-white mb-4">Sync Complete</h2>
+          <p className="text-slate-400 mb-8 leading-relaxed">All due lessons have been processed. Your memory retention is currently optimized.</p>
+          <Link href="/" className="px-8 py-3 rounded-xl font-bold text-white bg-slate-800 hover:bg-slate-700 transition-colors border border-white/10 shadow-lg">
+            Return to Command Center
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const hasQuizData = currentLesson.quiz_question && currentLesson.quiz_options && currentLesson.correct_answer;
+
+  return (
+    <div className="w-full max-w-3xl mx-auto flex flex-col min-h-[calc(100vh-8rem)] animate-in fade-in slide-in-from-bottom-4 duration-500">
+      
+      {/* Progress Bar */}
+      <div className="flex flex-col gap-4 mb-8">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-bold tracking-[0.2em] text-sky-400 uppercase">Active Session</p>
+          <span className="text-sm font-bold text-slate-500">{currentIndex + 1} / {queue.length}</span>
+        </div>
+        <div className="w-full bg-slate-800/60 rounded-full h-1.5 border border-white/5 overflow-hidden">
+          <div 
+            className="h-full bg-gradient-to-r from-blue-500 to-sky-400 transition-all duration-500"
+            style={{ width: `${((currentIndex) / queue.length) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col">
+        
+        {/* State 1: The Decision OR The Passive Reveal front */}
+        {activeMode !== "quiz" && (
+          <div className={`glass-panel flex-1 rounded-3xl p-8 md:p-12 flex flex-col justify-center transition-all duration-500 ${isRevealed ? 'border-sky-500/30 shadow-[0_0_20px_rgba(56,189,248,0.15)]' : ''}`}>
+            
+            <div className="absolute top-8 left-8">
+              <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-800/50 border border-white/5 rounded-full shadow-inner">
+                Module Node: {currentLesson.module_id}
+              </span>
+            </div>
+
+            <div className="text-center w-full max-w-2xl mx-auto mt-4">
+              <h3 className="text-2xl md:text-3xl font-medium text-white leading-relaxed">
+                {currentLesson.title}
+              </h3>
+              
+              {/* Note: The 'content_text' is usually the answer, so we might want to hide it initially if they are testing themselves. For now, matching original logic. */}
+              <p className="mt-6 text-slate-400 text-lg">
+                  {currentLesson.content_text}
+              </p>
+            </div>
+
+            {/* The Math Payload (The Actual Answer) */}
+            {isRevealed && (
+              <div className="mt-8 pt-8 border-t border-slate-700/50 text-center animate-in fade-in slide-in-from-top-4 duration-300 w-full max-w-2xl mx-auto">
+                <p className="text-[10px] font-bold tracking-[0.2em] text-sky-400 uppercase mb-4 text-glow">Technical Detail (No Mastery Progress Awarded)</p>
+                
+                <div className="text-xl md:text-2xl font-mono text-white">
+                  {currentLesson.content_math ? (
+                    <div className="bg-slate-900/50 border border-sky-500/30 rounded-2xl p-6 flex justify-center shadow-inner mt-4">
+                      <MathRenderer formula={currentLesson.content_math} />
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 text-base mt-4">Review complete. Please rate your recall.</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* State 2: Active Recall (Quiz Mode) */}
+        {activeMode === "quiz" && hasQuizData && (
+          <div className="animate-in slide-in-from-right-8 duration-500">
+             <QuizEngine
+                question={currentLesson.quiz_question!}
+                options={currentLesson.quiz_options!}
+                correctAnswer={currentLesson.correct_answer!}
+                onSuccess={handleQuizSuccess} 
+              />
+              <div className="text-center mt-4">
+                <button 
+                  onClick={() => { setActiveMode("reveal"); setIsRevealed(true); }}
+                  className="text-xs font-bold text-slate-500 hover:text-sky-400 uppercase tracking-widest transition-colors"
+                >
+                  Abort Quiz & Reveal Answer
+                </button>
+              </div>
+          </div>
+        )}
+      </div>
+
+      {/* Control Footer */}
+      <div className="mt-6 flex flex-col items-center justify-center min-h-[120px]">
+        
+        {/* Decision State */}
+        {activeMode === "decision" && (
+          <div className="w-full flex flex-col md:flex-row gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {hasQuizData && (
+              <button 
+                onClick={() => setActiveMode("quiz")}
+                className="flex-1 px-8 py-4 rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.2)] text-lg font-bold text-slate-900 bg-gradient-to-r from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 transition-all hover:-translate-y-1 group border border-emerald-400"
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <span>Active Recall</span>
+                  <span className="text-[10px] uppercase tracking-widest text-emerald-900/70 font-black">Earn Mastery Progress</span>
+                </div>
+              </button>
+            )}
+
+            <button 
+              onClick={() => { setActiveMode("reveal"); setIsRevealed(true); }}
+              className={`flex-1 px-8 py-4 rounded-2xl text-lg font-bold text-slate-300 glass-panel hover:bg-white/5 border border-white/10 transition-all hover:-translate-y-1 flex flex-col items-center justify-center gap-1 ${!hasQuizData ? 'max-w-md mx-auto' : ''}`}
+            >
+              <span>Passive Review</span>
+              <span className="text-[10px] uppercase tracking-widest text-slate-500 font-black">Maintain SM-2 Engine Only</span>
+            </button>
+          </div>
+        )}
+
+        {/* Reveal State Rating Buttons */}
+        {activeMode === "reveal" && isRevealed && (
+          <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <button onClick={() => handleRevealRating(1)} className="flex flex-col items-center justify-center py-4 rounded-2xl glass-panel hover:bg-red-500/10 border-transparent hover:border-red-500/30 transition-all hover:-translate-y-1 group">
+              <span className="text-sm font-bold text-red-400">Again</span>
+              <span className="text-[10px] text-slate-500 group-hover:text-red-400/70">Reset</span>
+            </button>
+            <button onClick={() => handleRevealRating(3)} className="flex flex-col items-center justify-center py-4 rounded-2xl glass-panel hover:bg-amber-500/10 border-transparent hover:border-amber-500/30 transition-all hover:-translate-y-1 group">
+              <span className="text-sm font-bold text-amber-400">Hard</span>
+              <span className="text-[10px] text-slate-500 group-hover:text-amber-400/70">Short</span>
+            </button>
+            <button onClick={() => handleRevealRating(4)} className="flex flex-col items-center justify-center py-4 rounded-2xl glass-panel hover:bg-emerald-500/10 border-transparent hover:border-emerald-500/30 transition-all hover:-translate-y-1 shadow-[0_0_15px_rgba(16,185,129,0.05)] group">
+              <span className="text-sm font-bold text-emerald-400">Good</span>
+              <span className="text-[10px] text-slate-500 group-hover:text-emerald-400/70">Mid</span>
+            </button>
+            <button onClick={() => handleRevealRating(5)} className="flex flex-col items-center justify-center py-4 rounded-2xl glass-panel hover:bg-blue-500/10 border-transparent hover:border-blue-500/30 transition-all hover:-translate-y-1 group">
+              <span className="text-sm font-bold text-blue-400">Easy</span>
+              <span className="text-[10px] text-slate-500 group-hover:text-blue-400/70">Long</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+    </div>
+  );
+}
+
+
+==================== FILE: ./frontend/app/layout.tsx ====================
+
+import type { Metadata } from "next";
+import Navbar from "@/components/Navbar";
+import "./globals.css";
+import AuthGuard from "@/components/AuthGuard";
+
+export const metadata: Metadata = {
+  title: "Spirelay | Engineering Mastery",
+  description: "Algorithmic Spaced Repetition for Exact Sciences",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body className="min-h-screen flex flex-col antialiased selection:bg-sky-500/30">
+        
+        {/* Subtle radial gradient to act as a "light source" behind the grid */}
+        <div className="fixed inset-0 z-[-1] bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(56,189,248,0.15),rgba(255,255,255,0))]" />
+        <AuthGuard>
+          {/* Smart Global Navigation Bar */}
+          <Navbar />
+
+          {/* Main Content Wrapper with Max-Width and Responsive Edge Padding */}
+          <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-8 md:py-12 flex flex-col relative">
+            {children}
+          </main>
+        </AuthGuard>
+      </body>
+    </html>
+  );
+}
+
+==================== FILE: ./frontend/app/lessons/[id]/page.tsx ====================
+
+"use client";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import OptimizedVideoPlayer from "@/components/OptimizedVideoPlayer"; // 🛡️ IMPORT NEW PLAYER
+import QuizEngine from "@/components/QuizEngine";
+import MathRenderer from "@/components/MathRenderer";
+import type { Lesson, ProgressUpdateRequest } from "@/types/api";
+import { createClient } from "@/lib/supabase";
+
+export default function LessonPage() {
+  const params = useParams();
+  const router = useRouter();
+  const supabase = createClient();
+  
+  const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLessonData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+
+      try {
+        const res = await fetch(`http://localhost:8000/api/lessons/${params.id}`, {
+          headers: { "Authorization": `Bearer ${session.access_token}` }
+        });
+        const data = await res.json();
+        setLesson(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLessonData();
+  }, [params.id, router, supabase]);
+
+  const handleMarkAsUnderstood = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    // Quality 4 (Good) signifies they successfully passed the lesson
+    const payload: ProgressUpdateRequest = { quality: 4 };
+
+    const response = await fetch(`http://localhost:8000/api/progress/${params.id}`, {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      alert(`✅ Telemetry Logged! This sequence is now in your Spaced Repetition Engine.`);
+      router.push("/modules");
+    }
+  };
+
+  if (loading) return <div className="p-10 text-center animate-pulse text-sky-400 font-mono mt-12">DECRYPTING PAYLOAD...</div>;
+  if (!lesson) return <div className="p-10 text-center text-red-500 font-bold">Error: Lesson data corrupted.</div>;
+
+  return (
+    <div className="max-w-4xl mx-auto py-8 flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      
+      <div>
+        <p className="text-sm font-bold tracking-[0.2em] text-sky-400 uppercase mb-1">Technical Payload</p>
+        <h1 className="text-3xl md:text-4xl font-black text-white text-glow">{lesson.title}</h1>
+      </div>
+
+      {lesson.video_url && (
+        <div className="rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+           {/* 🛡️ REPLACED WITH NEW COMPONENT IN FOCUS MODE */}
+          <OptimizedVideoPlayer url={lesson.video_url} mode="focus" />
+        </div>
+      )}
+
+      {/* Content & Math block */}
+      <div className="glass-panel p-8 rounded-2xl flex flex-col gap-6">
+        <p className="text-slate-300 leading-relaxed text-lg">{lesson.content_text}</p>
+        
+        {lesson.content_math && (
+           <div className="bg-slate-900/50 border border-sky-500/30 rounded-xl p-6 flex justify-center shadow-inner">
+             <div className="text-white text-xl">
+               <MathRenderer formula={lesson.content_math} />
+             </div>
+           </div>
+        )}
+      </div>
+
+      {/* Quiz Engine */}
+      {lesson.quiz_question && lesson.quiz_options && lesson.correct_answer && (
+        <div className="glass-panel-active p-8 rounded-2xl">
+          <p className="text-[10px] font-bold tracking-[0.2em] text-sky-400 uppercase mb-4">Verification Check</p>
+          <QuizEngine
+            question={lesson.quiz_question}
+            options={lesson.quiz_options}
+            correctAnswer={lesson.correct_answer}
+            onSuccess={() => setIsUnlocked(true)} 
+          />
+        </div>
+      )}
+
+      {/* Action Button */}
+      <div className="flex justify-center mt-4 pb-12">
+        <button
+          onClick={handleMarkAsUnderstood}
+          disabled={!isUnlocked}
+          className={`w-full max-w-md px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg ${
+            isUnlocked
+              ? "bg-gradient-to-r from-emerald-500 to-teal-400 text-white hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+              : "glass-panel text-slate-500 cursor-not-allowed border-dashed"
+          }`}
+        >
+          {isUnlocked ? "🚀 INJECT INTO ENGINE" : "🔒 PASS VERIFICATION TO UNLOCK"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+==================== FILE: ./frontend/app/modules/[id]/page.tsx ====================
+
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase";
+
+interface Lesson {
+  id: number;
+  title: string;
+  content_text: string;
+}
+
+export default function ModuleIndexPage() {
+  const params = useParams();
+  const router = useRouter();
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    const fetchLessons = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setLessons([]);
+          return;
+        }
+
+        const res = await fetch(`http://localhost:8000/api/modules/${params.id}/lessons`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!res.ok) throw new Error("Failed to fetch lessons");
+        const data = await res.json();
+        setLessons(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void fetchLessons();
+  }, [params.id, supabase]);
+
+  if (loading) return <div className="p-10 text-sky-400 font-mono animate-pulse">DECRYPTING MODULE ARCHIVES...</div>;
+
+  return (
+    <div className="w-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-4xl mx-auto">
+      <button 
+        onClick={() => router.push('/modules')}
+        className="text-sky-400 hover:text-sky-300 text-sm font-bold tracking-widest uppercase flex items-center gap-2 w-max transition-colors"
+      >
+        ← Back to Curriculum
+      </button>
+
+      <div>
+        <h1 className="text-4xl font-extrabold text-white tracking-tight mb-2 text-glow">Module Sequences</h1>
+        <p className="text-slate-400">Select a technical payload below to begin your study sequence.</p>
+      </div>
+
+      {lessons.length === 0 ? (
+        <div className="glass-panel p-10 text-center rounded-2xl border-dashed border-white/10">
+          <p className="text-slate-500 font-medium">No payload data found in this module node.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {lessons.map((lesson, index) => (
+            <Link key={lesson.id} href={`/lessons/${lesson.id}`}>
+              <div className="glass-panel p-6 rounded-2xl shadow-sm border border-white/5 hover:border-sky-500/50 hover:shadow-[0_0_20px_rgba(56,189,248,0.15)] transition-all cursor-pointer group flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-sky-400 mb-1">
+                    Sequence {index + 1}
+                  </p>
+                  <h2 className="text-xl font-bold text-white group-hover:text-sky-300 transition">
+                    {lesson.title}
+                  </h2>
+                  <p className="text-sm text-slate-400 mt-2 line-clamp-2 max-w-xl">
+                    {lesson.content_text}
+                  </p>
+                </div>
+                <div className="h-12 w-12 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-sky-500/20 group-hover:border-sky-500/50 transition">
+                  <span className="text-sky-400 ml-1">▶</span>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+==================== FILE: ./frontend/app/modules/page.tsx ====================
+
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase";
+
+type Module = {
+  id: number;
+  title: string;
+  description?: string | null;
+};
+
+export default function ModulesPage() {
+  const [modules, setModules] = useState<Module[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const supabase = createClient();
+
+  useEffect(() => {
+    const fetchModules = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setModules([]);
+          return;
+        }
+
+        const response = await fetch("http://localhost:8000/api/modules", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        const data = await response.json();
+        setModules(data);
+      } catch (err) {
+        console.error("Failed to fetch modules:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchModules();
+  }, [supabase]);
+
+  const filteredModules = modules.filter(mod => 
+    mod.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    mod.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (loading) return <div className="p-10 text-sky-400 font-mono animate-pulse">SYNCING ARCHIVES...</div>;
+
+  return (
+    <div className="w-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <p className="text-sm font-bold tracking-[0.2em] text-sky-400 uppercase mb-1">Curriculum</p>
+          <h1 className="text-4xl font-extrabold text-white tracking-tight">Learning Modules</h1>
+        </div>
+        <input
+          type="text"
+          placeholder="Search topics..."
+          className="w-full md:w-96 px-4 py-2 bg-slate-800/50 border border-white/10 text-white rounded-xl focus:ring-2 focus:ring-sky-400/40 outline-none"
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredModules.map((mod) => (
+          <Link href={`/modules/${mod.id}`} key={mod.id} className="block group">
+            <div className="glass-panel p-6 rounded-2xl h-full flex flex-col hover:-translate-y-1 transition-all border-white/5 hover:border-sky-500/30">
+              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-sky-300">{mod.title}</h3>
+              <p className="text-sm text-slate-400 line-clamp-3">{mod.description}</p>
+              <div className="mt-auto pt-4 flex justify-between items-center text-[10px] font-bold text-sky-400 uppercase tracking-widest">
+                <span>Database Node: {mod.id}</span>
+                <span>Enter Module →</span>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+==================== FILE: ./frontend/app/page.tsx ====================
+
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+import type { ModuleProgressSummary } from "@/types/api";
+
+export default function Dashboard() {
+  const [stats, setStats] = useState<ModuleProgressSummary[]>([]);
+  const [dueCount, setDueCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState("Engineer");
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchTelemetry = async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      if (session.user?.user_metadata?.first_name) {
+        setUserName(session.user.user_metadata.first_name);
+      } else if (session.user?.email) {
+        setUserName(session.user.email.split('@')[0]);
+      }
+
+      const headers = { Authorization: `Bearer ${session.access_token}` };
+
+      try {
+        const [statsRes, dueRes] = await Promise.all([
+          fetch("http://localhost:8000/api/progress/summary", { headers }),
+          fetch("http://localhost:8000/api/progress/due", { headers })
+        ]);
+
+        const statsData = await statsRes.json();
+        const dueData = await dueRes.json();
+
+        setStats(statsData);
+        setDueCount(dueData.due_count);
+      } catch (err) {
+        console.error("Telemetry Sync Failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTelemetry();
+  }, []);
+
+  const priorityModule = stats.length > 0 
+    ? stats.reduce((prev, current) => (prev.mastery_score < current.mastery_score) ? prev : current)
+    : null;
+
+  const avgRetention = stats.length > 0 
+    ? Math.round(stats.reduce((acc, curr) => acc + curr.mastery_score, 0) / stats.length) 
+    : 0;
+
+  const handlePriorityClick = () => {
+    if (priorityModule) {
+      router.push(`/modules/${priorityModule.module_id}`);
+    }
+  };
+
+  if (loading) {
+    return <div className="w-full h-96 flex items-center justify-center text-sky-400 font-mono animate-pulse">
+      INITIALIZING SYSTEM TELEMETRY...
+    </div>;
+  }
+
+  return (
+    <div className="w-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-bold tracking-[0.2em] text-sky-400 uppercase mb-1">
+            Command Center
+          </p>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight">
+            Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-600 text-glow capitalize">{userName}</span>
+          </h1>
+        </div>
+        <Link 
+          href="/review"
+          className="px-6 py-3 rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 transition-all hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2"
+        >
+          <span>Start Review Session</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+        </Link>
+      </div>
+
+      {/* Top Level Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2 hover:border-sky-500/30 transition-colors group">
+          <div className="flex items-center gap-3 text-slate-400 group-hover:text-sky-400 transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012-2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            <span className="text-sm font-bold uppercase tracking-wider">Memory Retention</span>
+          </div>
+          <div className="flex items-end gap-2">
+            <span className="text-4xl font-black text-white">{avgRetention}</span>
+            <span className="text-xl font-bold text-slate-500 mb-1">%</span>
+          </div>
+        </div>
+
+        <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2 hover:border-sky-500/30 transition-colors group">
+          <div className="flex items-center gap-3 text-slate-400 group-hover:text-amber-400 transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /></svg>
+            <span className="text-sm font-bold uppercase tracking-wider">Modules Active</span>
+          </div>
+          <div className="flex items-end gap-2">
+            <span className="text-4xl font-black text-white">{stats.length}</span>
+            <span className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wide">Topics</span>
+          </div>
+        </div>
+
+        <div className="glass-panel p-6 rounded-2xl flex flex-col gap-2 hover:border-sky-500/30 transition-colors group">
+          <div className="flex items-center gap-3 text-slate-400 group-hover:text-red-400 transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span className="text-sm font-bold uppercase tracking-wider">Pending Reviews</span>
+          </div>
+          <div className="flex items-end gap-2">
+            <span className="text-4xl font-black text-white">{dueCount}</span>
+            <span className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wide">Cards</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4">
+        
+        {/* Main Action Area (Priority Module) */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <h2 className="text-xl font-bold text-slate-200 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+            Priority Module
+          </h2>
+          
+          <div 
+            onClick={handlePriorityClick}
+            className="glass-panel-active p-8 rounded-3xl relative overflow-hidden group cursor-pointer hover:shadow-[0_0_30px_rgba(56,189,248,0.2)] transition-all duration-300"
+          >
+            <div className="absolute right-0 top-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-sky-400/20 transition-colors duration-500" />
+            
+            <div className="relative z-10 flex flex-col gap-4">
+              <div className="flex justify-between items-start">
+                <span className="px-3 py-1 text-xs font-bold uppercase tracking-widest text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-full w-max">
+                  {priorityModule?.module_title || "Initializing..."}
+                </span>
+                <span className="text-sky-400 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
+                  Enter Sequence →
+                </span>
+              </div>
+
+              <h3 className="text-3xl font-extrabold text-white">
+                {priorityModule ? `Mastery Level: ${Math.round(priorityModule.mastery_score)}%` : "Database Syncing..."}
+              </h3>
+              <p className="text-slate-400 max-w-md leading-relaxed">
+                {priorityModule 
+                  ? `Your memory decay curve suggests focusing on ${priorityModule.module_title} today to maintain optimal retention.` 
+                  : "Scanning your neural decay patterns to determine the optimal study path..."}
+              </p>
+              
+              <div className="mt-4 flex items-center gap-4">
+                <div className="w-full bg-slate-800/50 rounded-full h-2 max-w-xs border border-white/5 overflow-hidden">
+                  <div 
+                    className="bg-gradient-to-r from-blue-500 to-sky-400 h-2 rounded-full transition-all duration-1000" 
+                    style={{ width: `${priorityModule?.mastery_score || 0}%` }}
+                  />
+                </div>
+                <span className="text-sm font-bold text-slate-400">{Math.round(priorityModule?.mastery_score || 0)}% Mastered</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar (Right) - Live System Activity */}
+        <div className="flex flex-col gap-6">
+          <h2 className="text-xl font-bold text-slate-200">System Activity</h2>
+          <div className="glass-panel p-6 rounded-3xl flex flex-col gap-4 h-full">
+            {stats.length === 0 ? (
+               <div className="flex-1 flex items-center justify-center text-center text-slate-500 italic text-sm">
+                 <p>Awaiting data injection. Visit the Discover page to add payloads to your engine.</p>
+               </div>
+            ) : (
+              <div className="flex flex-col gap-4 overflow-y-auto max-h-[300px] scrollbar-hide pr-2">
+                {stats.map((stat, idx) => (
+                  <Link href={`/modules/${stat.module_id}`} key={idx} className="flex flex-col gap-2 p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/10 group cursor-pointer">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-bold text-white group-hover:text-sky-400 transition-colors truncate pr-4">
+                        {stat.module_title}
+                      </span>
+                      <span className="text-xs font-mono text-slate-400">
+                        {stat.lessons_started}/{stat.total_lessons}
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-800/50 rounded-full h-1 border border-white/5">
+                      <div 
+                        className={`h-1 rounded-full ${stat.mastery_score > 80 ? 'bg-emerald-400' : stat.mastery_score > 40 ? 'bg-amber-400' : 'bg-sky-400'}`}
+                        style={{ width: `${stat.mastery_score}%` }}
+                      />
+                    </div>
+                  </Link>
+                 ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+==================== FILE: ./frontend/app/globals.css ====================
+
+@import "tailwindcss";
+
+:root {
+  --background: #0B0F19; 
+  --text-main: #F8FAFC;
+  --grid-color: rgba(255, 255, 255, 0.03);
+  --primary-glow: rgba(56, 189, 248, 0.4);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text-main);
+  /* The Cyber-Physical Grid Background */
+  background-image: 
+    linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-attachment: fixed;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer utilities {
+  /* Frosted Glass Effect (Pure CSS for Tailwind v4 stability) */
+  .glass-panel {
+    background-color: rgb(19 27 43 / 0.6);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgb(255 255 255 / 0.1);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Intense Glass for specific active elements */
+  .glass-panel-active {
+    background-color: rgb(30 41 59 / 0.8);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid rgb(56 189 248 / 0.3);
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+  }
+
+  /* Neon Text Glow */
+  .text-glow {
+    text-shadow: 0 0 10px var(--primary-glow);
+  }
+}
+
+/* Custom Scrollbar for a sleek look */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Tactile Error Feedback */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+==================== FILE: ./frontend/app/login/page.tsx ====================
+
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase";
+import Link from "next/link";
+import Image from "next/image";
+
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const router = useRouter();
+  const supabase = createClient();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+    } else {
+      router.push("/");
+    }
+  };
+
+  const handleRecoverKeys = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setError(null);
+    setMessage(null);
+
+    if (!email) {
+      setError("Please enter your Email Address to initiate key recovery.");
+      return;
+    }
+
+    setLoading(true);
+    
+    // Sends the reset email and redirects them to the update page once they click the link
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/update-password`,
+    });
+
+    if (error) {
+      setError(error.message);
+    } else {
+      setMessage("Recovery sequence initiated. Check your inbox for the reset link.");
+    }
+    
+    setLoading(false);
+  };
+
+  return (
+    <div className="min-h-screen flex bg-slate-900">
+      {/* LEFT SIDE: Brand / Graphic */}
+      <div className="hidden lg:flex lg:w-1/2 bg-white relative overflow-hidden items-center justify-center">
+        <div className="absolute left-10 top-0 h-full w-[2px] bg-red-300/60 pointer-events-none z-10" />
+        <div className="absolute right-0 top-0 h-full w-px bg-slate-200/70 pointer-events-none z-10" />
+        <div className="absolute left-[18%] top-[22%] h-72 w-72 rounded-full bg-indigo-600/20 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-[-8%] left-[-8%] h-80 w-80 rounded-full bg-sky-500/20 blur-3xl pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(15,23,42,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.035)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+
+        <div className="relative z-20 px-12 py-16 max-w-xl text-center -translate-y-6">
+          <div className="flex justify-center mb-4">
+            <div className="drop-shadow-[0_0_24px_rgba(99,102,241,0.18)]">
+              <div className="w-72 xl:w-[24rem] mx-auto">
+                <Image src="/spirelay_logo_noBg.png" alt="Spirelay Logo" width={900} height={900} className="object-contain w-full h-auto" priority />
+              </div>
+            </div>
+          </div>
+          <p className="text-[15px] font-bold tracking-[0.18em] text-sky-500 uppercase mb-6">
+            System Authorization
+          </p>
+          <p className="max-w-lg mx-auto text-lg text-slate-800 font-large leading-8">
+            Access your personalized learning matrices and monitor your neural decay curves. <br/> 
+            Welcome back to the terminal.
+          </p>
+        </div>
+      </div>
+
+      {/* RIGHT SIDE: Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center lg:items-start p-8 sm:p-12 lg:pt-32 bg-slate-900 relative overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-700/70 rounded-full blur-3xl opacity-50 pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-sky-500/40 rounded-full blur-3xl opacity-40 pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+
+        <div className="w-full max-w-md relative z-10">
+          <div className="lg:hidden mb-8 text-center">
+            <div className="w-28 mx-auto mb-4">
+              <Image src="/spirelay_logo_noBg.png" alt="Spirelay Logo" width={220} height={220} className="object-contain w-full h-auto" priority />
+            </div>
+            <p className="text-xs font-bold tracking-[0.18em] text-sky-400 uppercase">Spirelay</p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 sm:p-10 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+            <div className="mb-10 text-center lg:text-left">
+              <p className="text-xs font-bold tracking-[0.2em] text-sky-400 uppercase mb-3">Secure Portal</p>
+              <h2 className="text-3xl font-extrabold text-white tracking-tight">Operator Login</h2>
+            </div>
+
+            <form className="space-y-6" onSubmit={handleLogin}>
+              <div>
+                <label className="block text-sm font-bold text-slate-200 mb-1.5">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3.5 bg-white/10 border border-white/10 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-400/50 transition-all duration-200 placeholder:text-slate-400"
+                  placeholder="engineer@example.com"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="block text-sm font-bold text-slate-200">Password</label>
+                  <button 
+                    type="button" 
+                    onClick={handleRecoverKeys}
+                    className="text-xs font-bold text-slate-400 hover:text-sky-400 transition-colors bg-transparent border-none cursor-pointer"
+                  >
+                    Recover keys?
+                  </button>
+                </div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3.5 bg-white/10 border border-white/10 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/50 focus:border-sky-400/50 transition-all duration-200 placeholder:text-slate-400"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              {error && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-300 text-sm font-semibold flex items-center">
+                  <span className="mr-2">⚠️</span>{error}
+                </div>
+              )}
+              
+              {message && (
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-300 text-sm font-semibold flex items-center">
+                  <span className="mr-2">✅</span>{message}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex justify-center py-4 px-4 rounded-xl shadow-[0_0_20px_rgba(56,189,248,0.2)] text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-sky-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:-translate-y-0.5 active:translate-y-0"
+              >
+                {loading ? "Authenticating..." : "Initialize Session"}
+              </button>
+            </form>
+
+            <div className="mt-8 text-center text-sm">
+              <p className="text-slate-300 font-medium">
+                No active credentials?{" "}
+                <Link href="/signup" className="text-sky-400 font-bold hover:text-sky-300 transition-colors">
+                  sign up here
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+==================== FILE: ./frontend/src/types/api.ts ====================
+
+export interface Module {
+  id: number;
+  title: string;
+  description: string;
+}
+
+export interface Lesson {
+  id: number;
+  module_id: number;
+  title: string;
+  content_text: string;
+  content_math?: string | null;
+  video_url?: string | null;
+  quiz_question?: string | null;
+  quiz_options?: string[] | null;
+  correct_answer?: string | null;
+}
+
+export interface ProgressUpdateRequest {
+  quality: 0 | 1 | 2 | 3 | 4 | 5;
+}
+
+export interface ProgressUpdateResponse {
+  status: "success";
+  message: string;
+  next_review_date: string;
+  interval: number;
+  repetitions: number;
+  ease_factor: number;
+}
+
+export interface ReviewQueueResponse {
+  lesson_id: number | null;
+}
+
+export interface ModuleProgressSummary {
+  module_id: number;
+  module_title: string;
+  total_lessons: number;
+  lessons_started: number;
+  mastery_score: number;
+}
+
+
+==================== FILE: ./frontend/src/components/Navbar.tsx ====================
+
+"use client";
+
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase";
+import Image from "next/image";
+export default function Navbar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
+
+  // Hide navbar on auth pages
+  if (pathname === "/login" || pathname === "/signup") {
+    return null;
+  }
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
+
+  // Define your Spirelay routes
+  const navLinks = [
+    { name: "Dashboard", href: "/" },
+    { name: "Discover", href: "/discover" },
+    { name: "Modules", href: "/modules" },
+    { name: "Review", href: "/review" },
+    { name: "Settings", href: "/settings" },
+    { name: "Admin", href: "/admin" },
+  ];
+
+  return (
+    <header className="sticky top-0 z-50 w-full glass-panel border-b-0 border-white/5">
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-8">
+          
+          {/* Brand Logo & Name */}
+            <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity group">
+            {/* Enlarged Logo Container */}
+            <div className="bg-gradient-to-tr from-cyan-400/70 to-indigo-500/30 rounded-2xl p-1 shadow-[0_0_25px_rgba(56,189,248,0.25)] group-hover:shadow-[0_0_35px_rgba(56,189,248,0.4)] transition-all duration-300">
+            <div className="w-10 h-10 rounded-2xl bg-slate-800/40 border border-white/10 flex items-center justify-center shadow-[0_0_15px_rgba(56,189,248,0.25)] group-hover:shadow-[0_0_35px_rgba(56,189,248,0.4)] transition-all duration-300 overflow-hidden">
+                <Image
+                src="/spirelay_logo_noBg.png" 
+                alt="Spirelay Logo"
+                width={56} 
+                height={56}
+                className="object-contain p-3 scale-600 w-full h-full" 
+                priority
+                />
+            </div>
+            </div>
+            {/* Architected Brand Name */}
+            <div className="flex flex-col">
+                <span className="font-black text-2xl tracking-tighter text-white leading-tight">
+                SPIRELAY
+                </span>
+                <span className="text-[10px] font-bold tracking-[0.4em] text-sky-400 uppercase leading-tight -mt-0.5">
+                Engineered Mastery
+                </span>
+            </div>
+            </Link>
+          {/* Desktop Navigation Links */}
+          <nav className="hidden md:flex items-center gap-2">
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href;
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    isActive
+                      ? "bg-white/10 text-sky-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] border border-white/5"
+                      : "text-slate-400 hover:text-white hover:bg-white/5 border border-transparent"
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+        
+        {/* Profile / Auth Actions */}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={handleLogout}
+            className="text-sm font-bold text-slate-400 hover:text-red-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-500/10"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+==================== FILE: ./frontend/src/components/MasteryChart.tsx ====================
+
+"use client";
+import React from "react";
+import type { ModuleProgressSummary } from "@/types/api";
+
+interface MasteryChartProps {
+  data: ModuleProgressSummary[];
+}
+
+export default function MasteryChart({ data }: MasteryChartProps) {
+if (!Array.isArray(data) || data.length === 0) {
+      return <div className="text-gray-500 italic">No progress data available.</div>;
+  }
+
+  return (
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 w-full">
+      <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+        <span>📊</span> Engineering Tracks Mastery
+      </h2>
+      
+      <div className="space-y-6">
+        {data.map((track) => (
+          <div key={track.module_id} className="w-full">
+            <div className="flex justify-between items-end mb-2">
+              <div>
+                <h3 className="font-bold text-blue-900">{track.module_title}</h3>
+                <p className="text-xs text-gray-500">
+                  {track.lessons_started} of {track.total_lessons} lessons started
+                </p>
+              </div>
+              <span className="text-sm font-black text-blue-700">
+                {track.mastery_score}%
+              </span>
+            </div>
+            
+            {/* The Progress Bar Background */}
+            <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden border border-gray-200">
+              {/* The Dynamic Fill */}
+              <div 
+                className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-1000 ease-out"
+                style={{ width: `${track.mastery_score}%` }}
+              ></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+==================== FILE: ./frontend/src/components/MathRenderer.tsx ====================
+
+"use client";
+import 'katex/dist/katex.min.css';
+import { BlockMath } from 'react-katex';
+
+interface MathRendererProps {
+  formula: string;
+}
+
+export default function MathRenderer({ formula }: MathRendererProps) {
+  return (
+    <div className="bg-white p-4 rounded border border-blue-100 text-center text-xl overflow-x-auto my-4 shadow-sm">
+      <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-4 text-left">
+        Core Formula
+      </p>
+      <div className="text-blue-900">
+        <BlockMath
+          math={formula}
+          renderError={(error) => (
+            <span className="text-xs text-red-600 font-semibold break-all">
+              Invalid math expression: {error.message}
+            </span>
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+
+==================== FILE: ./frontend/src/components/QuizEngine.tsx ====================
+
+"use client";
+import React, { useEffect, useRef, useState } from "react";
+
+interface QuizEngineProps {
+  question: string;
+  options: string[];
+  correctAnswer: string;
+  onSuccess: (isFirstTry: boolean) => void;
+}
+
+export default function QuizEngine({ question, options, correctAnswer, onSuccess }: QuizEngineProps) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [hadIncorrectAttempt, setHadIncorrectAttempt] = useState(false);
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleSubmit = () => {
+    if (!selected) return;
+
+    setHasSubmitted(true);
+    const correct = selected === correctAnswer;
+    setIsCorrect(correct);
+
+    if (correct) {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+
+      // If they never failed, it's a perfect first try (SM-2 Quality 4 or 5)
+      const isFirstTry = !hadIncorrectAttempt;
+      
+      successTimeoutRef.current = setTimeout(() => {
+        onSuccess(isFirstTry);
+      }, 1500); // 1.5s delay to admire the green glow
+      return;
+    }
+
+    // Flag that they missed it, so next time they submit, isFirstTry will be false
+    setHadIncorrectAttempt(true);
+  };
+
+  return (
+    <div className="w-full mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="glass-panel-active p-8 sm:p-10 rounded-3xl relative overflow-hidden">
+        
+        {/* Ambient background glows based on right/wrong state */}
+        {hasSubmitted && isCorrect && (
+          <div className="absolute inset-0 bg-emerald-500/10 blur-3xl animate-in fade-in duration-500 pointer-events-none" />
+        )}
+        {hasSubmitted && !isCorrect && (
+          <div className="absolute inset-0 bg-red-500/10 blur-3xl animate-in fade-in duration-500 pointer-events-none" />
+        )}
+
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-6">
+            <div className={`w-2 h-2 rounded-full ${hasSubmitted ? (isCorrect ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]' : 'bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.8)]') : 'bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.8)] animate-pulse'}`} />
+            <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+              Knowledge Check
+            </span>
+          </div>
+          
+          <h3 className="text-2xl font-extrabold text-white mb-8 leading-relaxed">
+            {question}
+          </h3>
+
+          <div className="space-y-4 mb-8">
+            {options.map((option, index) => {
+              // Base Cyber-Physical Button Style
+              let buttonStyle = "glass-panel border-white/5 text-slate-300 hover:border-sky-500/30 hover:bg-white/5 cursor-pointer";
+              let letterStyle = "text-sky-400 bg-black/40 border-white/5 group-hover:border-sky-500/30";
+
+              // Active Selection Style
+              if (selected === option && !hasSubmitted) {
+                buttonStyle = "border-sky-500/50 bg-sky-500/10 text-white shadow-[0_0_15px_rgba(56,189,248,0.15)]";
+                letterStyle = "text-sky-300 border-sky-500/50 bg-sky-500/20";
+              }
+
+              // Post-Submission Styles
+              if (hasSubmitted) {
+                if (option === correctAnswer) {
+                  // The Right Answer (Always glows green, even if you missed it and are reviewing)
+                  buttonStyle = "border-emerald-500/50 bg-emerald-500/10 text-emerald-100 shadow-[0_0_30px_rgba(16,185,129,0.2)] cursor-default transform scale-[1.01]";
+                  letterStyle = "text-emerald-400 border-emerald-500/30 bg-emerald-500/20";
+                } else if (selected === option && !isCorrect) {
+                  // The Wrong Answer You Clicked (Red Shake)
+                  buttonStyle = "border-red-500/50 bg-red-500/10 text-red-100 shadow-[0_0_30px_rgba(239,68,68,0.2)] cursor-default animate-shake";
+                  letterStyle = "text-red-400 border-red-500/30 bg-red-500/20";
+                } else {
+                  // Wrong answers you didn't click fade out
+                  buttonStyle = "border-white/5 bg-black/20 text-slate-500 opacity-50 cursor-default";
+                  letterStyle = "text-slate-600 border-white/5 bg-black/40";
+                }
+              }
+
+              return (
+                <button
+                  key={index}
+                  onClick={() => {
+                    if (isCorrect) return; // Prevent clicking after solving
+                    setSelected(option);
+                    setHasSubmitted(false); // Reset submission state so they can try again
+                  }}
+                  className={`w-full text-left p-4 rounded-xl border transition-all duration-300 relative overflow-hidden group flex items-center gap-4 ${buttonStyle}`}
+                >
+                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold border transition-colors ${letterStyle}`}>
+                    {String.fromCharCode(65 + index)}
+                  </span>
+                  <span className="font-medium relative z-10">{option}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Action Area */}
+          {!isCorrect && (
+            <button
+              onClick={handleSubmit}
+              disabled={!selected}
+              className={`w-full py-4 rounded-xl text-sm font-bold transition-all duration-300 flex items-center justify-center gap-2 ${
+                selected
+                  ? "shadow-[0_0_20px_rgba(56,189,248,0.2)] text-white bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 hover:-translate-y-0.5 active:translate-y-0"
+                  : "bg-white/5 text-slate-500 cursor-not-allowed border border-white/5"
+              }`}
+            >
+              {hasSubmitted && !isCorrect ? "Recalibrate & Retry" : "Initialize Validation"}
+            </button>
+          )}
+
+          {isCorrect && (
+            <div className="w-full py-4 bg-emerald-500/10 text-emerald-400 rounded-xl font-bold text-center border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)] flex items-center justify-center gap-2 animate-in fade-in duration-500">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              Validation Successful. Node Unlocked.
+            </div>
+          )}
+          
+        </div>
+      </div>
+    </div>
+  );
+}
+
+==================== FILE: ./frontend/src/components/AuthGuard.tsx ====================
+
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { createClient } from "@/lib/supabase";
+
+// Routes that do NOT require authentication
+const PUBLIC_ROUTES = ["/login", "/signup", "/update-password"];
+// Routes meant for unauthenticated users only
+const GUEST_ONLY_ROUTES = ["/login", "/signup"];
+
+export default function AuthGuard({ children }: { children: React.ReactNode }) {
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname();
+  const supabase = createClient();
+
+  useEffect(() => {
+    const checkSecurityClearance = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+
+      const isGuestOnly = GUEST_ONLY_ROUTES.includes(pathname);
+
+      if (!session && !isPublicRoute) {
+        setIsAuthorized(false);
+        // Intruder detected on a private route -> Bounce to login
+        router.push("/login");
+      } else if (session && isGuestOnly) {
+        setIsAuthorized(false);
+        // Logged-in user trying to access login/signup -> Bounce to dashboard
+        router.push("/");
+      } else {
+        // Cleared!
+        setIsAuthorized(true);
+      }
+    };
+
+    checkSecurityClearance();
+
+    // Listen for live login/logout events across tabs
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+      const isGuestOnly = GUEST_ONLY_ROUTES.includes(pathname);
+      
+      if (!session && !isPublicRoute) {
+        setIsAuthorized(false);
+        router.push("/login");
+      } else if (session && isGuestOnly) {
+        setIsAuthorized(false);
+        router.push("/");
+      } else {
+        setIsAuthorized(true);
+      }
+    });
+
+    const handleVisibilityOrFocus = () => {
+      void checkSecurityClearance();
+    };
+
+    const recheckInterval = window.setInterval(() => {
+      void checkSecurityClearance();
+    }, 1500);
+
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    return () => {
+      window.clearInterval(recheckInterval);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+      authListener.subscription.unsubscribe();
+    };
+  }, [pathname, router, supabase.auth]);
+
+  // Show a sleek "Verifying" screen while checking credentials to prevent flashing private data
+  if (!isAuthorized && !PUBLIC_ROUTES.includes(pathname)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0B0F19]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-sky-500/20 border-t-sky-500 rounded-full animate-spin" />
+          <div className="text-sky-400 font-mono tracking-[0.2em] text-xs uppercase animate-pulse">
+            Verifying Security Clearance...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render the actual page if authorized
+  return <>{children}</>;
+}
+
+
+==================== FILE: ./frontend/src/components/OptimizedVideoPlayer.tsx ====================
+
+"use client";
+import { useEffect, useState, useRef, useCallback } from "react";
+
+type ReelAspect = "portrait" | "square" | "landscape";
+type ReelFit = "cover" | "contain";
+
+interface OptimizedVideoPlayerProps {
+  url: string;
+  aspect?: ReelAspect;
+  fit?: ReelFit;
+  isActive?: boolean;     
+  shouldMount?: boolean;
+  mode?: "feed" | "focus"; 
+  isGlobalMuted?: boolean; 
+  onToggleMute?: () => void;
+}
+
+const getYouTubeEmbedId = (url: string): string => {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.includes("youtu.be")) return parsed.pathname.replace("/", "").trim();
+    if (parsed.searchParams.get("v")) return parsed.searchParams.get("v") || "";
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    const embedIndex = parts.findIndex((part) => part === "embed");
+    if (embedIndex !== -1 && parts[embedIndex + 1]) return parts[embedIndex + 1];
+    return parts[parts.length - 1] || "";
+  } catch {
+    const parts = url.split("/");
+    return parts[parts.length - 1]?.split("?")[0] ?? "";
+  }
+};
+
+const buildYouTubeUrl = (url: string, mode: "feed" | "focus"): string => {
+  const videoId = getYouTubeEmbedId(url);
+  if (mode === "focus") {
+    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1`;
+  }
+  return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=0&mute=1&controls=0&loop=1&playlist=${videoId}&playsinline=1&modestbranding=1&rel=0`;
+};
+
+export default function OptimizedVideoPlayer({
+  url,
+  aspect = "landscape",
+  fit = "contain",
+  isActive = true,
+  shouldMount = true,
+  mode = "focus",
+  isGlobalMuted,
+  onToggleMute
+}: OptimizedVideoPlayerProps) {
+  
+  const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
+  const isFeed = mode === "feed";
+  
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [localMuted, setLocalMuted] = useState(isFeed);
+
+  // 🛡️ Determine the source of truth for the mute state
+  const currentlyMuted = isFeed && isGlobalMuted !== undefined ? isGlobalMuted : localMuted;
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const sendYTCmd = useCallback((func: string, args: unknown[] = []) => {
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ event: "command", func, args }),
+        "https://www.youtube.com"
+      );
+    }
+  }, []);
+
+  // 1. Play/Pause based on scroll
+  useEffect(() => {
+    if (!isFeed) return;
+
+    if (playTimerRef.current) {
+      clearTimeout(playTimerRef.current);
+      playTimerRef.current = null;
+    }
+    
+    if (isActive) {
+      setTimeout(() => setIsPlaying(true), 0); // 🛡️ DEFERRED UPDATE
+      playTimerRef.current = setTimeout(() => {
+        if (isYouTube) {
+           sendYTCmd("playVideo");
+           // Ensure it starts with the correct mute state
+           sendYTCmd(currentlyMuted ? "mute" : "unMute");
+        } else if (videoRef.current) {
+           videoRef.current.muted = currentlyMuted;
+           void videoRef.current.play().catch(() => {});
+        }
+      }, 200);//2ms delay to ensure the video is ready before sending commands
+    } else {
+      setTimeout(() => setIsPlaying(false), 0); // 🛡️ DEFERRED UPDATE
+      if (isYouTube) sendYTCmd("pauseVideo");
+      else if (videoRef.current) videoRef.current.pause();
+    }
+    return () => {
+      if (playTimerRef.current) {
+        clearTimeout(playTimerRef.current);
+        playTimerRef.current = null;
+      }
+    };
+  }, [isActive, isYouTube, sendYTCmd, isFeed, currentlyMuted]); 
+
+  // 2. 🛡️ NEW: Instantly react to mute toggles while the video is playing
+  useEffect(() => {
+    if (!isActive) return; // Only send commands to the active video
+
+    if (isYouTube) {
+      sendYTCmd(currentlyMuted ? "mute" : "unMute");
+    } else if (videoRef.current) {
+      videoRef.current.muted = currentlyMuted;
+    }
+  }, [currentlyMuted, isActive, isYouTube, sendYTCmd]);
+
+  const togglePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isYouTube) {
+      sendYTCmd(isPlaying ? "pauseVideo" : "playVideo");
+    } else if (videoRef.current) {
+      if (isPlaying) videoRef.current.pause();
+      else void videoRef.current.play().catch(() => {});
+    }
+    setIsPlaying((prev) => !prev);
+  };
+
+  const handleMuteToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isFeed && onToggleMute) {
+      onToggleMute(); // Flips the global state in DiscoverPage
+    } else {
+      setLocalMuted(!localMuted); // Flips the local state in LessonPage
+    }
+  };
+
+  if (!shouldMount) {
+    return <div className="absolute inset-0 z-0 bg-[#0B0F19] pointer-events-none" />;
+  }
+
+  const ytUrl = buildYouTubeUrl(url, mode);
+
+  if (mode === "focus") {
+    return (
+      <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-inner border border-white/10 group">
+        {isYouTube ? (
+          <iframe src={ytUrl} className="absolute top-0 left-0 w-full h-full" allow="autoplay; encrypted-media; fullscreen" allowFullScreen />
+        ) : (
+          <video src={url} controls className="w-full h-full object-contain" />
+        )}
+      </div>
+    );
+  }
+
+  const aspectClassMap: Record<ReelAspect, string> = { portrait: "aspect-[9/16]", square: "aspect-square", landscape: "aspect-video" };
+  const frameWidthMap: Record<ReelAspect, string> = { portrait: "max-w-sm", square: "max-w-8xl", landscape: "max-w-12xl" };
+  const ytScaleMap: Record<ReelAspect, Record<ReelFit, string>> = {
+    portrait: { cover: "w-[120%] h-[120%]", contain: "w-[100%] h-[100%]" },
+    square: { cover: "w-[112%] h-[112%]", contain: "w-[100%] h-[100%]" },
+    landscape: { cover: "w-[110%] h-[110%]", contain: "w-[100%] h-[100%]" },
+  };
+
+  return (
+    <div className="absolute inset-0 z-0 bg-[#0B0F19] overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        {isYouTube ? (
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(56,189,248,0.18),transparent_65%)] opacity-70" />
+        ) : (
+          <video src={url} loop muted playsInline className="w-full h-full object-cover opacity-20 blur-3xl scale-125 pointer-events-none" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+      </div>
+
+      <div className={`absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-full px-6 z-10 pointer-events-auto ${frameWidthMap[aspect]}`}>
+        <div className={`w-full ${aspectClassMap[aspect]} rounded-2xl overflow-hidden border border-sky-500/20 shadow-[0_0_50px_rgba(56,189,248,0.15)] bg-black/80 relative backdrop-blur-md`}>
+          {isYouTube ? (
+            <iframe ref={iframeRef} src={ytUrl} title="Spirelay reel video player" loading="lazy" className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none ${ytScaleMap[aspect][fit]}`} allow="autoplay; encrypted-media" />
+          ) : (
+            <video ref={videoRef} src={url} loop muted playsInline className={`w-full h-full ${fit === "cover" ? "object-cover" : "object-contain"} pointer-events-none`} />
+          )}
+        </div>
+      </div>
+
+      <div className="absolute left-6 bottom-40 z-30 flex flex-col gap-3 pointer-events-auto">
+        <button onClick={handleMuteToggle} className="w-12 h-12 rounded-full glass-panel flex items-center justify-center hover:bg-white/10 transition-colors border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:scale-110">
+          <span className="text-xl">{currentlyMuted ? "🔇" : "🔊"}</span>
+        </button>
+        <button onClick={togglePlay} className="w-12 h-12 rounded-full glass-panel flex items-center justify-center hover:bg-white/10 transition-colors border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:scale-110">
+          <span className="text-xl">{isPlaying ? "⏸️" : "▶️"}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
