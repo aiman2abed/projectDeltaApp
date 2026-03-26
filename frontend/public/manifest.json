@@ -1,0 +1,22 @@
+{
+  "name": "Spirelay - Engineered Mastery",
+  "short_name": "Spirelay",
+  "description": "Algorithmic Spaced Repetition Engine for Engineering Students",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/spirelay_logo_noBg.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/spirelay_logo_noBg.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
