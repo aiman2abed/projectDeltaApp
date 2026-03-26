@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from datetime import date, timedelta
 import random
-
+import os
 # Internal app imports
 import models, schemas
 from database import SessionLocal
@@ -23,14 +23,24 @@ app = FastAPI(
 
 # Configure Cross-Origin Resource Sharing (CORS)
 # Allows the Next.js frontend running on localhost:3000 to securely communicate with this API.
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["http://localhost:3000"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+# This allows your local dev environment OR your live Vercel URL
+frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[frontend_url, "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 def get_db():
     """
     Dependency generator for database sessions.
