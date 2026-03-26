@@ -5,6 +5,7 @@ from typing import List
 from datetime import date, timedelta
 import random
 import os
+import re
 # Internal app imports
 import models, schemas
 from database import SessionLocal
@@ -31,16 +32,32 @@ app = FastAPI(
 #     allow_headers=["*"],
 # )
 
-# This allows your local dev environment OR your live Vercel URL
-frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+# # This allows your local dev environment OR your live Vercel URL
+# frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=[frontend_url, "http://localhost:3000"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+# This regex allows your main domain AND any Vercel preview URL
+origins = [
+    "http://localhost:3000",
+    "https://spirelay.vercel.app"
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_url, "http://localhost:3000"],
+    allow_origins=origins,
+    allow_origin_regex=r"https://spirelay-.*\.vercel\.app", # Allows dynamic preview URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 def get_db():
     """
     Dependency generator for database sessions.
