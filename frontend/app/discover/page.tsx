@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+/**
+ * Discover page owns the vertical reel feed lifecycle.
+ * It synchronizes smart-feed data, active reel tracking, pull-to-refresh, and client-only video controls.
+ */
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase";
 import MathRenderer from "@/components/MathRenderer";
 import OptimizedVideoPlayer from "@/components/OptimizedVideoPlayer";
@@ -21,14 +25,12 @@ type Lesson = {
 
 const normalizeAspect = (aspect?: string | null): ReelAspect => {
   if (aspect === "portrait" || aspect === "square" || aspect === "landscape") return aspect;
-  // 🚀 TWEAK: Revert to landscape so desktop expands cinematically!
-  return "landscape"; 
+  return "landscape";
 };
 
 const normalizeFit = (fit?: string | null): ReelFit => {
   if (fit === "cover" || fit === "contain") return fit;
-  // Keeps mobile full-screen Reels style
-  return "cover"; 
+  return "cover";
 };
 
 export default function DiscoverPage() {
@@ -36,56 +38,75 @@ export default function DiscoverPage() {
   const [loading, setLoading] = useState(true);
   const [activeReelIndex, setActiveReelIndex] = useState(0);
   const [isGlobalMuted, setIsGlobalMuted] = useState(true);
-  
   const [isPulling, setIsPulling] = useState(false);
-  const touchStartY = useRef(0);
 
+  const touchStartY = useRef(0);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const supabase = createClient();
 
+  const isMountedRef = useRef(true);
+
   const fetchSmartFeed = useCallback(async () => {
-    setLoading(true);
-    const { data: { session } } = await supabase.auth.getSession();
+    if (isMountedRef.current) {
+      setLoading(true);
+    }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
     if (!session) {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLessons([]);
+        setLoading(false);
+      }
       return;
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/feed/smart`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/feed/smart`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
-      const data = await response.json();
-      
-      if (Array.isArray(data)) {
-        setLessons(data);
-      } else {
+      if (!response.ok) {
+        throw new Error(`Smart feed request failed with status ${response.status}`);
+      }
+
+      const payload: unknown = await response.json();
+
+      if (isMountedRef.current) {
+        setLessons(Array.isArray(payload) ? (payload as Lesson[]) : []);
+        setActiveReelIndex(0);
+      }
+    } catch {
+      if (isMountedRef.current) {
         setLessons([]);
       }
-      setActiveReelIndex(0); 
-    } catch (err) {
-      console.error("Feed Sync Failed:", err);
-      setLessons([]); 
     } finally {
-      setLoading(false);
-      setIsPulling(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+        setIsPulling(false);
+      }
     }
   }, [supabase]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     void fetchSmartFeed();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [fetchSmartFeed]);
 
-  const safeLessons = Array.isArray(lessons) ? lessons : [];
+  const safeLessons = useMemo(() => (Array.isArray(lessons) ? lessons : []), [lessons]);
 
   useEffect(() => {
     if (safeLessons.length === 0) {
       setActiveReelIndex(0);
       return;
     }
+
     if (activeReelIndex > safeLessons.length - 1) {
       setActiveReelIndex(safeLessons.length - 1);
     }
@@ -120,11 +141,14 @@ export default function DiscoverPage() {
   }, [safeLessons]);
 
   const handleInject = async (lessonId: number) => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session) return;
 
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/progress/${lessonId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/progress/${lessonId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -132,9 +156,12 @@ export default function DiscoverPage() {
         },
         body: JSON.stringify({ quality: 3 }),
       });
-      alert("Payload Injected: This lesson is now in your SM-2 queue!");
-    } catch (err) {
-      console.error("Injection failed:", err);
+
+      if (response.ok) {
+        alert("Payload Injected: This lesson is now in your SM-2 queue!");
+      }
+    } catch {
+      return;
     }
   };
 
@@ -147,7 +174,7 @@ export default function DiscoverPage() {
   const handleTouchMove = (e: React.TouchEvent) => {
     if (containerRef.current?.scrollTop === 0 && touchStartY.current > 0) {
       const currentY = e.touches[0].clientY;
-      if (currentY - touchStartY.current > 75) { 
+      if (currentY - touchStartY.current > 75) {
         setIsPulling(true);
       }
     }
@@ -164,9 +191,7 @@ export default function DiscoverPage() {
     return (
       <div className="flex h-[80vh] w-full flex-col items-center justify-center gap-4">
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-sky-500/30 border-t-sky-400" />
-        <p className="font-mono text-sm tracking-widest text-sky-400">
-          SYNCING GLOBAL REELS...
-        </p>
+        <p className="font-mono text-sm tracking-widest text-sky-400">SYNCING GLOBAL REELS...</p>
       </div>
     );
   }
@@ -208,20 +233,18 @@ export default function DiscoverPage() {
               data-index={index}
               className="relative flex h-full w-full snap-start flex-col justify-start md:items-center md:justify-center overflow-hidden bg-black"
             >
-              {/* 1. DOMINANT VIDEO LAYER - Anchored to Top */}
               <div className="absolute inset-0 z-0 h-full w-full flex items-start md:items-center justify-center bg-black">
                 {lesson.video_url ? (
                   <OptimizedVideoPlayer
                     url={lesson.video_url}
                     aspect={aspect}
-                    fit={fit} // Will now default to "cover" to stretch across the screen
+                    fit={fit}
                     isActive={isActive}
                     shouldMount={shouldMount}
                     mode="feed"
                     isGlobalMuted={isGlobalMuted}
                     onToggleMute={() => setIsGlobalMuted((prev) => !prev)}
                     feedActionSlot={
-                      // 🚀 TWEAK 1: High-visibility Action Button
                       <button
                         onClick={() => handleInject(lesson.id)}
                         className="group flex flex-col items-center gap-1.5 md:gap-2 mb-4 md:mb-0 pointer-events-auto"
@@ -229,9 +252,7 @@ export default function DiscoverPage() {
                         <div className="flex h-30 w-12 md:h-12 md:w-12 items-center justify-center rounded-full border-2 border-sky-400/80 bg-gradient-to-br from-sky-500/20 to-blue-500/20 shadow-[0_4px_15px_rgba(0,0,0,0.6)] transition-all duration-300 active:scale-95 group-hover:scale-105 group-hover:border-sky-300 group-hover:bg-slate-800">
                           <span className="text-2xl md:text-xl drop-shadow-[0_0_10px_rgba(56,189,248,0.9)]">⚡</span>
                         </div>
-                        <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-white ">
-                          Inject
-                        </span>
+                        <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-white ">Inject</span>
                       </button>
                     }
                   />
@@ -243,21 +264,14 @@ export default function DiscoverPage() {
                 )}
               </div>
 
-              {/* 2. REELS-STYLE PROTECTION GRADIENTS */}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[65%] bg-gradient-to-t from-cyan-500/20 via-blue-500/20 to-transparent md:h-[45%] md:from-black/80 md:via-black/30" />
 
-              {/* 3. FOREGROUND INFORMATION OVERLAY */}
               <div className="relative z-20 flex h-full w-full flex-row items-end justify-between px-4 pb-4 md:px-8 md:pb-10 pointer-events-none">
-                
-                {/* BOTTOM-LEFT: Educational Content Zone */}
                 <div className="flex w-[82%] md:w-full max-w-xl flex-col gap-2.5 md:gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  
-                  {/* Title */}
                   <h2 className="pointer-events-auto text-2xl md:text-4xl font-black tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-tight">
                     {lesson.title}
                   </h2>
 
-                  {/* Math Payload Card */}
                   {lesson.content_math && shouldMount && (
                     <div className="pointer-events-auto w-full max-w-[95%] md:max-w-lg overflow-hidden rounded-xl border border-white/10 bg-black/60 shadow-2xl backdrop-blur-xl">
                       <div className="border-b border-white/5 bg-white/5 px-3 py-1.5 md:px-4 md:py-2">
@@ -271,7 +285,6 @@ export default function DiscoverPage() {
                     </div>
                   )}
 
-                  {/* Explanation Description */}
                   {lesson.content_text && (
                     <p className="pointer-events-auto max-w-[95%] md:max-w-md rounded-xl bg-black/40 md:bg-gradient-to-r md:from-black/50 md:via-black/30 md:to-black/15 px-3 py-2 md:px-4 md:py-3 text-[13px] md:text-base leading-snug md:leading-6 text-slate-200 shadow-[0_2px_10px_rgba(0,0,0,0.5)] backdrop-blur-md border border-white/5 md:border-none line-clamp-3 md:line-clamp-none">
                       {lesson.content_text}
@@ -279,10 +292,7 @@ export default function DiscoverPage() {
                   )}
                 </div>
 
-                <div className="w-[18%] flex flex-col justify-end items-center pointer-events-none pb-2">
-                  {/* Space reserved for video player's right-aligned controls */}
-                </div>
-
+                <div className="w-[18%] flex flex-col justify-end items-center pointer-events-none pb-2" />
               </div>
             </section>
           );

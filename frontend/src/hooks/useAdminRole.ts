@@ -1,5 +1,9 @@
 "use client";
 
+/**
+ * Resolves whether the current authenticated user should see admin-only UI affordances.
+ * Authorization is enforced by backend policies; this hook only controls presentation.
+ */
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase";
 
@@ -9,27 +13,48 @@ export function useAdminRole() {
   const [roleLoading, setRoleLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const resolveRole = async () => {
       setRoleLoading(true);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        setIsAdmin(false);
-        setRoleLoading(false);
-        return;
+        if (!user) {
+          if (!cancelled) {
+            setIsAdmin(false);
+            setRoleLoading(false);
+          }
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (error) {
+          if (!cancelled) {
+            setIsAdmin(false);
+            setRoleLoading(false);
+          }
+          return;
+        }
+
+        if (!cancelled) {
+          setIsAdmin(data?.role?.toLowerCase() === "admin");
+          setRoleLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setIsAdmin(false);
+          setRoleLoading(false);
+        }
       }
-
-      const { data } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      setIsAdmin(data?.role?.toLowerCase() === "admin");
-      setRoleLoading(false);
     };
 
     void resolveRole();
@@ -40,7 +65,10 @@ export function useAdminRole() {
       void resolveRole();
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [supabase]);
 
   return { isAdmin, roleLoading };

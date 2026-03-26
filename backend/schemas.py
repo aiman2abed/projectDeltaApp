@@ -1,38 +1,45 @@
-from pydantic import BaseModel, Field, ConfigDict, field_validator
-from typing import List, Optional, Any
 from datetime import date
 import json
+from typing import Dict, List, Optional, Union
 
-# --- USER SCHEMAS ---
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+QuizOptionsInput = Union[List[str], Dict[str, str], str]
+
+
 class UserBase(BaseModel):
     email: str
     role: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
 
+
 class User(UserBase):
     id: str
 
     model_config = ConfigDict(from_attributes=True)
 
-# --- MODULE SCHEMAS ---
+
 class ModuleBase(BaseModel):
     title: str
     description: str
 
+
 class ModuleCreate(ModuleBase):
     pass
+
 
 class ModuleResponse(ModuleBase):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class ModuleUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
 
-# --- LESSON SCHEMAS ---
+
 class LessonBase(BaseModel):
     module_id: int
     title: str
@@ -40,11 +47,13 @@ class LessonBase(BaseModel):
     content_math: Optional[str] = None
     video_url: Optional[str] = None
     quiz_question: Optional[str] = None
-    quiz_options: Optional[Any] = None # Accept any format temporarily for flexible creation
+    quiz_options: Optional[QuizOptionsInput] = None
     correct_answer: Optional[str] = None
+
 
 class LessonCreate(LessonBase):
     pass
+
 
 class LessonUpdate(BaseModel):
     title: Optional[str] = None
@@ -52,8 +61,9 @@ class LessonUpdate(BaseModel):
     content_math: Optional[str] = None
     video_url: Optional[str] = None
     quiz_question: Optional[str] = None
-    quiz_options: Optional[Any] = None 
+    quiz_options: Optional[QuizOptionsInput] = None
     correct_answer: Optional[str] = None
+
 
 class LessonResponse(BaseModel):
     id: int
@@ -61,43 +71,49 @@ class LessonResponse(BaseModel):
     title: str
     content_text: str
     content_math: Optional[str] = None
-    video_url: Optional[str] = None 
+    video_url: Optional[str] = None
     quiz_question: Optional[str] = None
     quiz_options: Optional[List[str]] = None
     correct_answer: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
-    # 🛠️ CRITICAL FIX: Convert DB string to List[str] automatically
-    @field_validator('quiz_options', mode='before')
+    @field_validator("quiz_options", mode="before")
     @classmethod
-    def parse_quiz_options(cls, v):
-        if isinstance(v, str):
-            # Try to parse it as JSON first
+    def parse_quiz_options(cls, value: Optional[QuizOptionsInput]) -> Optional[List[str]]:
+        """
+        Normalize heterogeneous quiz-option storage into a predictable list for frontend consumers.
+        This keeps legacy rows compatible while the system converges on JSON list storage.
+        """
+        if value is None:
+            return None
+
+        if isinstance(value, list):
+            return [str(item) for item in value]
+
+        if isinstance(value, dict):
+            return [str(item) for item in value.values()]
+
+        if isinstance(value, str):
             try:
-                parsed = json.loads(v)
+                parsed = json.loads(value)
                 if isinstance(parsed, list):
-                    return parsed
+                    return [str(item) for item in parsed]
             except Exception:
                 pass
-            
-            # If it's a raw Postgres array like "{Option A, Option B}"
-            if v.startswith("{") and v.endswith("}"):
-                # Strip the brackets
-                cleaned = v[1:-1]
-                # Split by comma. This is a simplified split; 
-                # for robust parsing, JSON storage in DB is highly recommended.
-                # Here we strip extra quotes just in case.
-                items = [item.strip(' "') for item in cleaned.split(',')]
-                return items
-                
-            return [v] # Fallback: return the raw string as a single item list
-            
-        return v
 
-# --- PROGRESS SCHEMAS ---
+            if value.startswith("{") and value.endswith("}"):
+                cleaned = value[1:-1]
+                return [item.strip(' "') for item in cleaned.split(",") if item.strip()]
+
+            return [value]
+
+        return [str(value)]
+
+
 class ProgressUpdateRequest(BaseModel):
-    quality: int = Field(..., ge=0, le=5) 
+    quality: int = Field(..., ge=0, le=5)
+
 
 class ProgressUpdateResponse(BaseModel):
     status: str
@@ -107,6 +123,7 @@ class ProgressUpdateResponse(BaseModel):
     repetitions: int
     ease_factor: float
 
+
 class UserProgressBase(BaseModel):
     user_id: str
     lesson_id: int
@@ -115,19 +132,22 @@ class UserProgressBase(BaseModel):
     ease_factor: float
     next_review_date: date
 
+
 class UserProgressCreate(UserProgressBase):
     pass
+
 
 class UserProgress(UserProgressBase):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class ModuleProgressSummary(BaseModel):
     module_id: int
     module_title: str
     total_lessons: int
-    lessons_started : int
-    mastery_score : float
+    lessons_started: int
+    mastery_score: float
 
     model_config = ConfigDict(from_attributes=True)
