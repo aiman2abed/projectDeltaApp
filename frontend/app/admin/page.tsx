@@ -67,7 +67,7 @@ export default function AdminPage() {
       }
 
       try {
-        const meRes = await fetch("http://localhost:8000/api/users/me", {
+        const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}`/api/users/me", {
           headers: { Authorization: `Bearer ${session.access_token}` }
         });
         const meData = await meRes.json();
@@ -79,8 +79,8 @@ export default function AdminPage() {
         }
 
         const [modRes, usersRes] = await Promise.all([
-          fetch("http://localhost:8000/api/modules", { headers: { Authorization: `Bearer ${session.access_token}` } }),
-          fetch("http://localhost:8000/api/users", { headers: { Authorization: `Bearer ${session.access_token}` } })
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}`/api/modules", { headers: { Authorization: `Bearer ${session.access_token}` } }),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}`/api/users", { headers: { Authorization: `Bearer ${session.access_token}` } })
         ]);
 
         setModules(await modRes.json());
@@ -150,7 +150,7 @@ export default function AdminPage() {
 
     try {
       if (modal.mode === "new_module") {
-        const res = await fetch("http://localhost:8000/api/modules", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}`/api/modules", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
           body: JSON.stringify({ title: form.title, description: form.description })
@@ -174,7 +174,7 @@ export default function AdminPage() {
           setIsSubmitting(false);
           return;
         }
-        const res = await fetch("http://localhost:8000/api/lessons", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}`/api/lessons", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
           body: JSON.stringify({ 
