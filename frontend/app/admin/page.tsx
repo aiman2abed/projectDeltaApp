@@ -1,5 +1,9 @@
 "use client";
 
+/**
+ * Admin console for curriculum and tenant operations.
+ * Page-level role checks gate UI visibility only; API authorization remains backend-enforced.
+ */
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -36,16 +40,13 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Dynamic Modal State (Modules/Lessons)
   const [modal, setModal] = useState<ModalState>({ isOpen: false, mode: "new_module" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Sanction/Ban Modal State
   const [banModal, setBanModal] = useState<BanModalState>({ isOpen: false, userId: "", userEmail: "" });
   const [banAction, setBanAction] = useState<"temp" | "perma" | "delete">("temp");
   const [isBanning, setIsBanning] = useState(false);
 
-  // Unified Form State
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -70,10 +71,13 @@ export default function AdminPage() {
         const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/users/me`, {
           headers: { Authorization: `Bearer ${session.access_token}` }
         });
-        const meData = await meRes.json();
+        if (!meRes.ok) {
+          throw new Error(`Unable to resolve admin profile: ${meRes.status}`);
+        }
+        const meData: Partial<UserRow> = await meRes.json();
         
         if (meData.role !== "admin") {
-          alert("SECURITY PROTOCOL: Unauthorized Access.");
+          alert("Unauthorized access.");
           router.push("/");
           return;
         }
@@ -83,8 +87,10 @@ export default function AdminPage() {
           fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/users`, { headers: { Authorization: `Bearer ${session.access_token}` } })
         ]);
 
-        setModules(await modRes.json());
-        setUsers(await usersRes.json());
+        const modulesPayload: unknown = await modRes.json();
+        const usersPayload: unknown = await usersRes.json();
+        setModules(Array.isArray(modulesPayload) ? (modulesPayload as Module[]) : []);
+        setUsers(Array.isArray(usersPayload) ? (usersPayload as UserRow[]) : []);
       } catch (err) {
         console.error("Admin fetch failed:", err);
       } finally {
@@ -95,20 +101,25 @@ export default function AdminPage() {
     fetchAdminData();
   }, [router, supabase]);
 
-  // --- MODAL CONTROLS ---
-
   const openNewModule = () => {
     setForm({ title: "", description: "", parentModuleId: "", contentText: "", contentMath: "", videoUrl: "" });
     setModal({ isOpen: true, mode: "new_module" });
   };
 
   const openEditModule = (mod: Module) => {
-    setForm({ ...form, title: mod.title, description: mod.description || "" });
+    setForm((previous) => ({ ...previous, title: mod.title, description: mod.description || "" }));
     setModal({ isOpen: true, mode: "edit_module", targetId: mod.id });
   };
 
   const openNewLesson = (moduleId?: number) => {
-    setForm({ ...form, title: "", contentText: "", contentMath: "", videoUrl: "", parentModuleId: moduleId ? moduleId.toString() : (modules[0]?.id.toString() || "") });
+    setForm((previous) => ({
+      ...previous,
+      title: "",
+      contentText: "",
+      contentMath: "",
+      videoUrl: "",
+      parentModuleId: moduleId ? moduleId.toString() : (modules[0]?.id.toString() || ""),
+    }));
     setModal({ isOpen: true, mode: "new_lesson" });
   };
 
@@ -118,24 +129,11 @@ export default function AdminPage() {
 
   const openBanModal = (userId: string, userEmail: string) => {
     setBanModal({ isOpen: true, userId, userEmail });
-    setBanAction("temp"); // Reset to default safely
+    setBanAction("temp");
   };
 
   const closeBanModal = () => {
     setBanModal({ isOpen: false, userId: "", userEmail: "" });
-  };
-
-  // --- ACTION HANDLERS ---
-
-  const handleExportLogs = () => {
-    const dataToExport = activeTab === "modules" ? modules : users;
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataToExport, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `spirelay_${activeTab}_export.json`);
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
   };
 
   const handleModalSubmit = async () => {
@@ -146,7 +144,10 @@ export default function AdminPage() {
     
     setIsSubmitting(true);
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session) {
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       if (modal.mode === "new_module") {
@@ -236,7 +237,6 @@ export default function AdminPage() {
     }
   };
 
-  // 🛡️ NEW: Wipe User Progress Handler
   const handleWipeProgress = async (userId: string, userEmail: string) => {
     if (!confirm(`CRITICAL WARNING: This will completely erase all SM-2 learning telemetry and mastery progress for ${userEmail}. Their account and role will remain intact. Proceed?`)) return;
 
@@ -244,7 +244,6 @@ export default function AdminPage() {
     if (!session) return;
 
     try {
-      // You will need to implement this endpoint on your FastAPI backend
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/users/${userId}/progress`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${session.access_token}` }
@@ -266,7 +265,6 @@ export default function AdminPage() {
     
     try {
       if (banAction === "delete" && session) {
-         // await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/users/${banModal.userId}`, { method: "DELETE", ... })
          setUsers(users.filter(u => u.id !== banModal.userId));
       } else {
          alert(`User ${banModal.userEmail} has received a ${banAction} ban.`);

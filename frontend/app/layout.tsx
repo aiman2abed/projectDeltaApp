@@ -1,17 +1,18 @@
-import ClientLayoutWrapper from '@/components/ClientLayoutWrapper';
-import './globals.css';
+import ClientLayoutWrapper from "@/components/ClientLayoutWrapper";
+import "./globals.css";
 
-// 1. PWA METADATA (Allowed because this is now a Server Component)
+/**
+ * Root server layout that declares PWA metadata and mounts the client shell.
+ */
 export const metadata = {
-  title: 'Spirelay',
-  description: 'Engineered Mastery',
-  manifest: '/manifest.json',
+  title: "Spirelay",
+  description: "Engineered Mastery",
+  manifest: "/manifest.json",
 };
 
-// 2. MOBILE VIEWPORT CONFIG
 export const viewport = {
-  themeColor: '#000000',
-  width: 'device-width',
+  themeColor: "#000000",
+  width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
@@ -28,32 +29,19 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/spirelay_logo_noBg.png" />
       </head>
       <body className="bg-black text-white min-h-screen flex flex-col">
-        
-        {/* 3. SERVICE WORKER REGISTRATION */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(
-                    function(registration) {
-                      console.log('ServiceWorker registration successful');
-                    },
-                    function(err) {
-                      console.log('ServiceWorker registration failed: ', err);
-                    }
-                  );
-                });
+                window.addEventListener('load', function registerSpirelayServiceWorker() {
+                  navigator.serviceWorker.register('/sw.js').catch(function noop() {});
+                }, { once: true });
               }
             `,
           }}
         />
 
-        {/* 4. CLIENT NAVIGATION WRAPPER */}
-        <ClientLayoutWrapper>
-          {children}
-        </ClientLayoutWrapper>
-        
+        <ClientLayoutWrapper>{children}</ClientLayoutWrapper>
       </body>
     </html>
   );

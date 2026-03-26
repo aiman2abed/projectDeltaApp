@@ -1,4 +1,10 @@
 "use client";
+
+/**
+ * Unified media player for lesson focus mode and Discover feed mode.
+ * It normalizes YouTube URL variants into stable embed URLs and coordinates play/mute behavior
+ * so only the visible reel is active.
+ */
 import { useEffect, useState, useRef, useCallback, type ReactNode } from "react";
 
 type ReelAspect = "portrait" | "square" | "landscape";
@@ -16,37 +22,53 @@ interface OptimizedVideoPlayerProps {
   feedActionSlot?: ReactNode;
 }
 
-const getYouTubeEmbedId = (url: string): string => {
-  try {
-    const parsed = new URL(url);
-    if (parsed.hostname.includes("youtu.be")) return parsed.pathname.replace("/", "").trim();
-    if (parsed.searchParams.get("v")) return parsed.searchParams.get("v") || "";
-    const parts = parsed.pathname.split("/").filter(Boolean);
-    const embedIndex = parts.findIndex((part) => part === "embed");
-    if (embedIndex !== -1 && parts[embedIndex + 1]) return parts[embedIndex + 1];
-    return parts[parts.length - 1] || "";
-  } catch {
-    const parts = url.split("/");
-    return parts[parts.length - 1]?.split("?")[0] ?? "";
-  }
-};
-
-const buildYouTubeUrl = (url: string, mode: "feed" | "focus"): string => {
-  const videoId = getYouTubeEmbedId(url);
-
-  if (mode === "focus") {
-    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1`;
-  }
-
-  return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=0&mute=1&controls=0&loop=1&playlist=${videoId}&playsinline=1&modestbranding=1&rel=0`;
-};
-
-// 🚀 UPGRADED RAIL BUTTONS: Now they match the high-visibility Inject button style
 const railButtonClassName =
   "flex h-12 w-12 items-center justify-center rounded-full border-2 border-slate-600/80 bg-slate-900/90 backdrop-blur-xl shadow-[0_4px_15px_rgba(0,0,0,0.6)] transition-all duration-300 hover:scale-105 hover:bg-slate-800 hover:border-slate-500";
 
 const railLabelClassName =
   "text-[10px] font-extrabold uppercase tracking-[0.18em] text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]";
+
+function isYouTubeUrl(url: string): boolean {
+  const normalized = url.toLowerCase();
+  return normalized.includes("youtube.com") || normalized.includes("youtube-nocookie.com") || normalized.includes("youtu.be");
+}
+
+function getYouTubeEmbedId(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+
+    if (host.includes("youtu.be")) {
+      return parsed.pathname.replace("/", "").trim();
+    }
+
+    const v = parsed.searchParams.get("v");
+    if (v) {
+      return v;
+    }
+
+    const pathParts = parsed.pathname.split("/").filter(Boolean);
+    const embedIndex = pathParts.findIndex((part) => part === "embed");
+    if (embedIndex >= 0 && pathParts[embedIndex + 1]) {
+      return pathParts[embedIndex + 1];
+    }
+
+    return pathParts[pathParts.length - 1] ?? "";
+  } catch {
+    const fallbackMatch = url.match(/(?:v=|youtu\.be\/|embed\/)([^?&/]+)/i);
+    return fallbackMatch?.[1] ?? "";
+  }
+}
+
+function buildYouTubeUrl(url: string, mode: "feed" | "focus"): string {
+  const videoId = getYouTubeEmbedId(url);
+
+  if (mode === "focus") {
+    return `https://www.youtube-nocookie.com/embed/${videoId}?enablejsapi=1&rel=0&modestbranding=1`;
+  }
+
+  return `https://www.youtube-nocookie.com/embed/${videoId}?enablejsapi=1&autoplay=0&mute=1&controls=0&loop=1&playlist=${videoId}&playsinline=1&modestbranding=1&rel=0`;
+}
 
 export default function OptimizedVideoPlayer({
   url,
@@ -59,7 +81,7 @@ export default function OptimizedVideoPlayer({
   onToggleMute,
   feedActionSlot,
 }: OptimizedVideoPlayerProps) {
-  const isYouTube = url.includes("youtube") || url.includes("youtu.be");
+  const isYouTube = isYouTubeUrl(url);
   const isFeed = mode === "feed";
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -74,7 +96,7 @@ export default function OptimizedVideoPlayer({
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage(
         JSON.stringify({ event: "command", func, args }),
-        "https://www.youtube.com"
+        "https://www.youtube-nocookie.com"
       );
     }
   }, []);
@@ -95,7 +117,7 @@ export default function OptimizedVideoPlayer({
           sendYTCmd(currentlyMuted ? "mute" : "unMute");
         } else if (videoRef.current) {
           videoRef.current.muted = currentlyMuted;
-          void videoRef.current.play().catch(() => {});
+          void videoRef.current.play().catch(() => undefined);
         }
       }, 200);
     } else {
@@ -128,7 +150,7 @@ export default function OptimizedVideoPlayer({
       sendYTCmd(isPlaying ? "pauseVideo" : "playVideo");
     } else if (videoRef.current) {
       if (isPlaying) videoRef.current.pause();
-      else void videoRef.current.play().catch(() => {});
+      else void videoRef.current.play().catch(() => undefined);
     }
     setIsPlaying((prev) => !prev);
   };
@@ -137,9 +159,10 @@ export default function OptimizedVideoPlayer({
     e.stopPropagation();
     if (isFeed && onToggleMute) {
       onToggleMute();
-    } else {
-      setLocalMuted((prev) => !prev);
+      return;
     }
+
+    setLocalMuted((prev) => !prev);
   };
 
   if (!shouldMount) {
@@ -165,21 +188,18 @@ export default function OptimizedVideoPlayer({
     );
   }
 
-// 🚀 TWEAK: Enforce a max-height on desktop so it never overflows the monitor vertically
   const aspectClassMap: Record<ReelAspect, string> = {
     portrait: "h-full md:aspect-[9/16] md:max-h-[80vh]",
     square: "h-full md:aspect-square md:max-h-[80vh]",
     landscape: "h-full md:aspect-video md:max-h-[80vh]",
   };
 
-  // 🚀 TWEAK: Increased the landscape width to massive cinematic proportions on desktop (85vw)
   const frameWidthMap: Record<ReelAspect, string> = {
     portrait: "w-full md:max-w-md lg:max-w-lg",
     square: "w-full md:max-w-5xl",
     landscape: "w-full md:w-[85vw] max-w-7xl",
   };
 
-  // Ensure YouTube videos stretch far enough to cover vertical mobile screens without black bars
   const ytScaleMap: Record<ReelAspect, Record<ReelFit, string>> = {
     portrait: { cover: "w-[100%] h-[100%] md:w-[100%] md:h-[100%]", contain: "w-[100%] h-[100%]" },
     square: { cover: "w-[100%] h-[100%] md:w-[112%] md:h-[112%]", contain: "w-[100%] h-[100%]" },
@@ -204,11 +224,9 @@ export default function OptimizedVideoPlayer({
       </div>
 
       <div
-        // 🚀 TWEAK: Removed 'px-6' padding on mobile so the video touches the absolute edge of the phone.
         className={`absolute left-1/2 top-1/2 z-10 h-full md:h-auto w-full -translate-x-1/2 -translate-y-1/2 md:px-6 pointer-events-auto ${frameWidthMap[aspect]}`}
       >
         <div
-          // 🚀 TWEAK: Removed 'rounded-2xl border' on mobile. It now only looks like a card on desktop (md:).
           className={`relative w-full h-full rounded-xl border border-sky-500/20 md:h-auto overflow-hidden md:rounded-2xl md:border md:border-sky-500/20 bg-black shadow-[0_0_50px_rgba(56,189,248,0.15)] md:backdrop-blur-md ${aspectClassMap[aspect]}`}
         >
           {isYouTube ? (
