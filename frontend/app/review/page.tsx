@@ -36,7 +36,7 @@ export default function ReviewPage() {
       if (!session) return;
 
       try {
-        const response = await fetch("http://localhost:8000/api/feed/smart", {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}$1`/api/feed/smart", {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
         const data = await response.json();

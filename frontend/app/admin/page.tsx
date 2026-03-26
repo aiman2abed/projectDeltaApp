@@ -67,7 +67,7 @@ export default function AdminPage() {
       }
 
       try {
-        const meRes = await fetch("http://localhost:8000/api/users/me", {
+        const meRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/users/me`, {
           headers: { Authorization: `Bearer ${session.access_token}` }
         });
         const meData = await meRes.json();
@@ -79,8 +79,8 @@ export default function AdminPage() {
         }
 
         const [modRes, usersRes] = await Promise.all([
-          fetch("http://localhost:8000/api/modules", { headers: { Authorization: `Bearer ${session.access_token}` } }),
-          fetch("http://localhost:8000/api/users", { headers: { Authorization: `Bearer ${session.access_token}` } })
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/modules`, { headers: { Authorization: `Bearer ${session.access_token}` } }),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/users`, { headers: { Authorization: `Bearer ${session.access_token}` } })
         ]);
 
         setModules(await modRes.json());

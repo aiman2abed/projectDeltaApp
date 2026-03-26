@@ -27,7 +27,7 @@ export default function SettingsPage() {
       setUserEmail(session.user.email || "Unknown Identity");
 
       try {
-         const res = await fetch("http://localhost:8000/api/users/me", {
+         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/users/me`, {
            headers: { Authorization: `Bearer ${session.access_token}` }
          });
          const data = await res.json();

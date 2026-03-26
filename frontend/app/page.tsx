@@ -31,8 +31,8 @@ export default function Dashboard() {
 
       try {
         const [statsRes, dueRes] = await Promise.all([
-          fetch("http://localhost:8000/api/progress/summary", { headers }),
-          fetch("http://localhost:8000/api/progress/due", { headers })
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}$1`/api/progress/summary", { headers }),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}$1`/api/progress/due", { headers })
         ]);
 
         const statsData = await statsRes.json();
