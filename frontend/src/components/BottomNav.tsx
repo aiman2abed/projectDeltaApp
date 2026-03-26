@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase";
+import { useAdminRole } from "@/hooks/useAdminRole";
 import {
   Home,
   Compass,
@@ -15,50 +14,7 @@ import {
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const supabase = useMemo(() => createClient(), []);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [roleLoading, setRoleLoading] = useState(true);
-
-  useEffect(() => {
-    const checkRole = async () => {
-      setRoleLoading(true);
-
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      console.log("BottomNav auth user:", user);
-      console.log("BottomNav auth user error:", userError);
-
-      if (!user) {
-        setIsAdmin(false);
-        setRoleLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-
-      const admin = data?.role?.toLowerCase() === "admin";
-      setIsAdmin(admin);
-      setRoleLoading(false);
-    };
-
-    checkRole();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      checkRole();
-    });
-
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+  const { isAdmin, roleLoading } = useAdminRole();
 
   const baseNavItems = [
     { name: "Home", href: "/", icon: Home },
