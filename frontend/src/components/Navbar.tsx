@@ -2,59 +2,16 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { createClient } from "@/lib/supabase";
+import { useAdminRole } from "@/hooks/useAdminRole";
 import Image from "next/image";
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [roleLoading, setRoleLoading] = useState(true);
-
   const supabase = useMemo(() => createClient(), []);
-
-  useEffect(() => {
-    const checkRole = async () => {
-      setRoleLoading(true);
-
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        setIsAdmin(false);
-        setRoleLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      console.log("role query data:", data);
-      console.log("role query error:", error);
-
-      const admin = data?.role?.toLowerCase() === "admin";
-      setIsAdmin(admin);
-      setRoleLoading(false);
-
-      console.log("isAdmin state should become:", admin);
-    };
-
-    checkRole();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      checkRole();
-    });
-
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+  const { isAdmin } = useAdminRole();
 
   if (pathname === "/login" || pathname === "/signup") {
     return null;
