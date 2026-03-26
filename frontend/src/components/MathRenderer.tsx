@@ -8,7 +8,7 @@ interface MathRendererProps {
 
 export default function MathRenderer({ formula }: MathRendererProps) {
   return (
-    <div className="bg-white p-4 rounded border border-blue-100 text-center text-xl overflow-x-auto my-4 shadow-sm">
+    <div className="bg-gradient-to-r from-cyan-50 to-blue-50 p-4 rounded border border-blue-100 text-center text-xl overflow-x-auto my-4 shadow-sm">
       <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-4 text-left">
         Core Formula
       </p>

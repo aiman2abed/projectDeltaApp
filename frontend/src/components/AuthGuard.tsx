@@ -1,51 +1,58 @@
 "use client";
 
-import { useEffect, useState } from "react";
+/**
+ * Client-side route gate that prevents private page flashes while session state initializes.
+ * Final authorization is enforced server-side and via RLS; this only controls navigation flow.
+ */
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
-// Routes that do NOT require authentication
 const PUBLIC_ROUTES = ["/login", "/signup", "/update-password"];
-// Routes meant for unauthenticated users only
 const GUEST_ONLY_ROUTES = ["/login", "/signup"];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  // Guard-level state controls whether private route content can render at all.
   const [isAuthorized, setIsAuthorized] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
-    // Keeps route access synchronized with current session and current route classification.
+    let cancelled = false;
+
     const checkSecurityClearance = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (cancelled) return;
 
       const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
-
       const isGuestOnly = GUEST_ONLY_ROUTES.includes(pathname);
 
       if (!session && !isPublicRoute) {
         setIsAuthorized(false);
-        // Intruder detected on a private route -> Bounce to login
         router.push("/login");
-      } else if (session && isGuestOnly) {
-        setIsAuthorized(false);
-        // Logged-in user trying to access login/signup -> Bounce to dashboard
-        router.push("/");
-      } else {
-        // Cleared!
-        setIsAuthorized(true);
+        return;
       }
+
+      if (session && isGuestOnly) {
+        setIsAuthorized(false);
+        router.push("/");
+        return;
+      }
+
+      setIsAuthorized(true);
     };
 
-    checkSecurityClearance();
+    void checkSecurityClearance();
 
-    // Syncs cross-tab auth transitions so route protection remains consistent everywhere.
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (cancelled) return;
+
       const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
       const isGuestOnly = GUEST_ONLY_ROUTES.includes(pathname);
-      
+
       if (!session && !isPublicRoute) {
         setIsAuthorized(false);
         router.push("/login");
@@ -58,27 +65,25 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     });
 
     const handleVisibilityOrFocus = () => {
-      // Re-validates session when user returns to this tab/window.
       void checkSecurityClearance();
     };
 
-    // Defensive polling for token/session drift between auth callbacks.
     const recheckInterval = window.setInterval(() => {
       void checkSecurityClearance();
-    }, 1500);
+    }, 30000);
 
     window.addEventListener("focus", handleVisibilityOrFocus);
     document.addEventListener("visibilitychange", handleVisibilityOrFocus);
 
     return () => {
+      cancelled = true;
       window.clearInterval(recheckInterval);
       window.removeEventListener("focus", handleVisibilityOrFocus);
       document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
       authListener.subscription.unsubscribe();
     };
-  }, [pathname, router, supabase.auth]);
+  }, [pathname, router, supabase]);
 
-  // Loading layer owns the full viewport to prevent private content flash before access resolves.
   if (!isAuthorized && !PUBLIC_ROUTES.includes(pathname)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0B0F19]">
@@ -92,6 +97,5 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Render the actual page if authorized
   return <>{children}</>;
 }
