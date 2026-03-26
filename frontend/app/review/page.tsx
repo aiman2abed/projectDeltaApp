@@ -36,7 +36,7 @@ export default function ReviewPage() {
       if (!session) return;
 
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}$1`/api/feed/smart", {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/feed/smart`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
         const data = await response.json();
@@ -71,7 +71,7 @@ export default function ReviewPage() {
     if (!session || !currentLesson) return;
 
     try {
-      await fetch(`http://localhost:8000/api/progress/${currentLesson.id}`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/progress/${currentLesson.id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -95,7 +95,7 @@ export default function ReviewPage() {
     const quality = isFirstTry ? 4 : 2; 
 
     try {
-      await fetch(`http://localhost:8000/api/progress/${currentLesson.id}`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/progress/${currentLesson.id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

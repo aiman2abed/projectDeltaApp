@@ -27,7 +27,7 @@ export default function ModulesPage() {
           return;
         }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}$1`/api/modules", {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/modules`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
         const data = await response.json();

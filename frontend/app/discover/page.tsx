@@ -55,7 +55,7 @@ export default function DiscoverPage() {
       }
 
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}$1`/api/feed/smart", {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/feed/smart`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
 
@@ -121,7 +121,7 @@ export default function DiscoverPage() {
     if (!session) return;
 
     try {
-      await fetch(`http://localhost:8000/api/progress/${lessonId}`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/progress/${lessonId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -150,7 +150,7 @@ export default function AdminPage() {
 
     try {
       if (modal.mode === "new_module") {
-        const res = await fetch("http://localhost:8000/api/modules", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/modules`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
           body: JSON.stringify({ title: form.title, description: form.description })
@@ -158,7 +158,7 @@ export default function AdminPage() {
         if (res.ok) setModules([...modules, await res.json()]);
 
       } else if (modal.mode === "edit_module") {
-        const res = await fetch(`http://localhost:8000/api/modules/${modal.targetId}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/modules/${modal.targetId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
           body: JSON.stringify({ title: form.title, description: form.description })
@@ -174,7 +174,7 @@ export default function AdminPage() {
           setIsSubmitting(false);
           return;
         }
-        const res = await fetch("http://localhost:8000/api/lessons", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/lessons`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
           body: JSON.stringify({ 
@@ -203,7 +203,7 @@ export default function AdminPage() {
     if (!session) return;
 
     try {
-      const res = await fetch(`http://localhost:8000/api/modules/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/modules/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${session.access_token}` }
       });
@@ -223,7 +223,7 @@ export default function AdminPage() {
     if (!session) return;
 
     try {
-      const res = await fetch(`http://localhost:8000/api/users/${userId}/role`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/users/${userId}/role`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ role: newRole })
@@ -245,7 +245,7 @@ export default function AdminPage() {
 
     try {
       // You will need to implement this endpoint on your FastAPI backend
-      const res = await fetch(`http://localhost:8000/api/admin/users/${userId}/progress`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/admin/users/${userId}/progress`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${session.access_token}` }
       });
@@ -266,7 +266,7 @@ export default function AdminPage() {
     
     try {
       if (banAction === "delete" && session) {
-         // await fetch(`http://localhost:8000/api/users/${banModal.userId}`, { method: "DELETE", ... })
+         // await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/users/${banModal.userId}`, { method: "DELETE", ... })
          setUsers(users.filter(u => u.id !== banModal.userId));
       } else {
          alert(`User ${banModal.userEmail} has received a ${banAction} ban.`);

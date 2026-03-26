@@ -26,9 +26,6 @@ Thumbs.db
 #for opensource usage
 !.env.example
 
-#logo
-*.png
-
 # Ignore data dumps and scripts
 chunk_*.txt
 frontend_review_chunk.txt
