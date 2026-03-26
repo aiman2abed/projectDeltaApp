@@ -21,12 +21,14 @@ type Lesson = {
 
 const normalizeAspect = (aspect?: string | null): ReelAspect => {
   if (aspect === "portrait" || aspect === "square" || aspect === "landscape") return aspect;
-  return "landscape";
+  // 🚀 TWEAK: Revert to landscape so desktop expands cinematically!
+  return "landscape"; 
 };
 
 const normalizeFit = (fit?: string | null): ReelFit => {
   if (fit === "cover" || fit === "contain") return fit;
-  return "contain";
+  // Keeps mobile full-screen Reels style
+  return "cover"; 
 };
 
 export default function DiscoverPage() {
@@ -35,7 +37,6 @@ export default function DiscoverPage() {
   const [activeReelIndex, setActiveReelIndex] = useState(0);
   const [isGlobalMuted, setIsGlobalMuted] = useState(true);
   
-  // Pull-to-refresh state
   const [isPulling, setIsPulling] = useState(false);
   const touchStartY = useRef(0);
 
@@ -59,17 +60,15 @@ export default function DiscoverPage() {
 
       const data = await response.json();
       
-      // STRICT ARRAY CHECK: Prevents the .map() TypeError
       if (Array.isArray(data)) {
         setLessons(data);
       } else {
-        console.warn("API did not return an array for lessons:", data);
         setLessons([]);
       }
       setActiveReelIndex(0); 
     } catch (err) {
       console.error("Feed Sync Failed:", err);
-      setLessons([]); // Fallback to empty array on network failure
+      setLessons([]); 
     } finally {
       setLoading(false);
       setIsPulling(false);
@@ -80,7 +79,6 @@ export default function DiscoverPage() {
     void fetchSmartFeed();
   }, [fetchSmartFeed]);
 
-  // Use a safe reference for bounds checking
   const safeLessons = Array.isArray(lessons) ? lessons : [];
 
   useEffect(() => {
@@ -181,15 +179,18 @@ export default function DiscoverPage() {
       onTouchEnd={handleTouchEnd}
       className="fixed inset-x-0 top-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] md:top-16 md:bottom-0 snap-y snap-mandatory overflow-y-scroll bg-black scrollbar-hide"
     >
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 p-4 pt-safe bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+        <h1 className="text-white font-black text-xl tracking-tight drop-shadow-md">Discover</h1>
+      </div>
+
       {isPulling && (
-        <div className="absolute top-4 left-0 right-0 z-50 flex justify-center animate-pulse">
-          <div className="bg-sky-500/20 text-sky-400 text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full border border-sky-500/30 backdrop-blur-md">
+        <div className="absolute top-16 md:top-4 left-0 right-0 z-50 flex justify-center animate-pulse">
+          <div className="bg-sky-500/20 text-sky-400 text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full border border-sky-500/30 backdrop-blur-md shadow-lg">
             Release to Refresh
           </div>
         </div>
       )}
 
-      {/* SAFE RENDER LOOP */}
       {safeLessons.length === 0 ? (
         <div className="flex h-full w-full items-center justify-center text-slate-500 italic text-sm">
           No lessons found in the Discovery Feed.
@@ -205,74 +206,83 @@ export default function DiscoverPage() {
             <section
               key={lesson.id}
               data-index={index}
-              className="relative flex h-full w-full snap-start items-center justify-center overflow-hidden"
+              className="relative flex h-full w-full snap-start flex-col justify-start md:items-center md:justify-center overflow-hidden bg-black"
             >
-              {lesson.video_url ? (
-                <OptimizedVideoPlayer
-                  url={lesson.video_url}
-                  aspect={aspect}
-                  fit={fit}
-                  isActive={isActive}
-                  shouldMount={shouldMount}
-                  mode="feed"
-                  isGlobalMuted={isGlobalMuted}
-                  onToggleMute={() => setIsGlobalMuted((prev) => !prev)}
-                  feedActionSlot={
-                    <button
-                      onClick={() => handleInject(lesson.id)}
-                      className="group flex flex-col items-center gap-2"
-                    >
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-sky-400/30 bg-black/30 backdrop-blur-md shadow-lg shadow-sky-500/20 transition-all duration-300 group-hover:scale-105 group-hover:border-sky-300/50 group-hover:bg-black/45">
-                        <span className="text-xl">⚡</span>
+              {/* 1. DOMINANT VIDEO LAYER - Anchored to Top */}
+              <div className="absolute inset-0 z-0 h-full w-full flex items-start md:items-center justify-center bg-black">
+                {lesson.video_url ? (
+                  <OptimizedVideoPlayer
+                    url={lesson.video_url}
+                    aspect={aspect}
+                    fit={fit} // Will now default to "cover" to stretch across the screen
+                    isActive={isActive}
+                    shouldMount={shouldMount}
+                    mode="feed"
+                    isGlobalMuted={isGlobalMuted}
+                    onToggleMute={() => setIsGlobalMuted((prev) => !prev)}
+                    feedActionSlot={
+                      // 🚀 TWEAK 1: High-visibility Action Button
+                      <button
+                        onClick={() => handleInject(lesson.id)}
+                        className="group flex flex-col items-center gap-1.5 md:gap-2 mb-4 md:mb-0 pointer-events-auto"
+                      >
+                        <div className="flex h-30 w-12 md:h-12 md:w-12 items-center justify-center rounded-full border-2 border-sky-400/80 bg-gradient-to-br from-sky-500/20 to-blue-500/20 shadow-[0_4px_15px_rgba(0,0,0,0.6)] transition-all duration-300 active:scale-95 group-hover:scale-105 group-hover:border-sky-300 group-hover:bg-slate-800">
+                          <span className="text-2xl md:text-xl drop-shadow-[0_0_10px_rgba(56,189,248,0.9)]">⚡</span>
+                        </div>
+                        <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-white ">
+                          Inject
+                        </span>
+                      </button>
+                    }
+                  />
+                ) : (
+                  <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden bg-[#0B0F19]">
+                    <div className="absolute inset-0 bg-[linear-gradient(rgba(56,189,248,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(56,189,248,0.05)_1px,transparent_1px)] bg-[size:40px_40px] animate-[pulse_4s_ease-in-out_infinite]" />
+                    <div className="h-72 w-72 rounded-full bg-sky-500/10 blur-3xl" />
+                  </div>
+                )}
+              </div>
+
+              {/* 2. REELS-STYLE PROTECTION GRADIENTS */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[65%] bg-gradient-to-t from-cyan-500/20 via-blue-500/20 to-transparent md:h-[45%] md:from-black/80 md:via-black/30" />
+
+              {/* 3. FOREGROUND INFORMATION OVERLAY */}
+              <div className="relative z-20 flex h-full w-full flex-row items-end justify-between px-4 pb-4 md:px-8 md:pb-10 pointer-events-none">
+                
+                {/* BOTTOM-LEFT: Educational Content Zone */}
+                <div className="flex w-[82%] md:w-full max-w-xl flex-col gap-2.5 md:gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  
+                  {/* Title */}
+                  <h2 className="pointer-events-auto text-2xl md:text-4xl font-black tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] leading-tight">
+                    {lesson.title}
+                  </h2>
+
+                  {/* Math Payload Card */}
+                  {lesson.content_math && shouldMount && (
+                    <div className="pointer-events-auto w-full max-w-[95%] md:max-w-lg overflow-hidden rounded-xl border border-white/10 bg-black/60 shadow-2xl backdrop-blur-xl">
+                      <div className="border-b border-white/5 bg-white/5 px-3 py-1.5 md:px-4 md:py-2">
+                        <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em] text-sky-400 opacity-90">
+                          Math Payload
+                        </p>
                       </div>
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-300/90">
-                        Inject
-                      </span>
-                    </button>
-                  }
-                />
-              ) : (
-                <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden bg-[#0B0F19]">
-                  <div className="absolute inset-0 bg-[linear-gradient(rgba(56,189,248,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(56,189,248,0.05)_1px,transparent_1px)] bg-[size:40px_40px] animate-[pulse_4s_ease-in-out_infinite]" />
-                  <div className="h-72 w-72 rounded-full bg-sky-500/10 blur-3xl" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-                </div>
-              )}
-
-              <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/60 via-black/25 to-transparent" />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-[42%] bg-gradient-to-t from-cyan-500/20 via-black/25 to-transparent" />
-
-              <div className="relative z-10 flex h-full w-full items-end px-5 pb-8 md:px-8 md:pb-10 pointer-events-none">
-                <div className="w-full max-w-xl">
-                  <div className="flex flex-col gap-4 md:gap-5 animate-in fade-in slide-in-from-bottom-8 duration-500">
-                    <div className="pointer-events-auto w-max">
-                      <span className="inline-flex items-center rounded-md border border-sky-300/20 bg-sky-500/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white shadow-md">
-                        Module Node: {lesson.module_id}
-                      </span>
+                      <div className="p-3 md:p-4 text-center text-sm md:text-xl font-mono text-white overflow-x-auto scrollbar-hide shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] backdrop-blur-md bg-gradient-to-br from-sky-500/10 to-blue-500/10">
+                        <MathRenderer formula={lesson.content_math} />
+                      </div>
                     </div>
+                  )}
 
-                    <h2 className="pointer-events-auto max-w-lg text-3xl font-black tracking-tight text-white drop-shadow-md md:text-4xl">
-                      {lesson.title}
-                    </h2>
-
-                    {lesson.content_math && shouldMount && (
-                      <div className="pointer-events-auto w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-black/25 shadow-lg backdrop-blur-sm">
-                        <div className="border-b border-white/10 bg-white/5 px-4 py-2">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-300">
-                            Math Payload
-                          </p>
-                        </div>
-                        <div className="p-4 text-center text-lg font-mono text-white md:text-xl">
-                          <MathRenderer formula={lesson.content_math} />
-                        </div>
-                      </div>
-                    )}
-
-                    <p className="pointer-events-auto max-w-md rounded-xl bg-gradient-to-r from-black/50 via-black/30 to-black/15 px-4 py-3 text-sm leading-6 text-slate-100 shadow-lg backdrop-blur-sm md:text-base">
+                  {/* Explanation Description */}
+                  {lesson.content_text && (
+                    <p className="pointer-events-auto max-w-[95%] md:max-w-md rounded-xl bg-black/40 md:bg-gradient-to-r md:from-black/50 md:via-black/30 md:to-black/15 px-3 py-2 md:px-4 md:py-3 text-[13px] md:text-base leading-snug md:leading-6 text-slate-200 shadow-[0_2px_10px_rgba(0,0,0,0.5)] backdrop-blur-md border border-white/5 md:border-none line-clamp-3 md:line-clamp-none">
                       {lesson.content_text}
                     </p>
-                  </div>
+                  )}
                 </div>
+
+                <div className="w-[18%] flex flex-col justify-end items-center pointer-events-none pb-2">
+                  {/* Space reserved for video player's right-aligned controls */}
+                </div>
+
               </div>
             </section>
           );
