@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from 'next/navigation';
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
@@ -7,7 +8,6 @@ import { useRouter } from "next/navigation";
 import type { ModuleProgressSummary } from "@/types/api";
 
 export default function Dashboard() {
-  // Dashboard owns telemetry state used by both KPI cards and the priority panel.
   const [stats, setStats] = useState<ModuleProgressSummary[]>([]);
   const [dueCount, setDueCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -15,7 +15,6 @@ export default function Dashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    // Synchronizes the landing dashboard with auth identity and backend progress snapshots.
     const fetchTelemetry = async () => {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
@@ -38,10 +37,18 @@ export default function Dashboard() {
         const statsData = await statsRes.json();
         const dueData = await dueRes.json();
 
-        setStats(statsData);
-        setDueCount(dueData.due_count);
+        // STRICT ARRAY CHECK: Prevents the .map() TypeError
+        if (Array.isArray(statsData)) {
+          setStats(statsData);
+        } else {
+          console.warn("API did not return an array for stats:", statsData);
+          setStats([]);
+        }
+
+        setDueCount(dueData.due_count || 0);
       } catch (err) {
         console.error("Telemetry Sync Failed:", err);
+        setStats([]); // Fallback to empty array on network failure
       } finally {
         setLoading(false);
       }
@@ -50,16 +57,18 @@ export default function Dashboard() {
     fetchTelemetry();
   }, []);
 
-  const priorityModule = stats.length > 0 
-    ? stats.reduce((prev, current) => (prev.mastery_score < current.mastery_score) ? prev : current)
+  // Safe checks for priority and retention calculations
+  const safeStats = Array.isArray(stats) ? stats : [];
+  
+  const priorityModule = safeStats.length > 0 
+    ? safeStats.reduce((prev, current) => (prev.mastery_score < current.mastery_score) ? prev : current)
     : null;
 
-  const avgRetention = stats.length > 0 
-    ? Math.round(stats.reduce((acc, curr) => acc + curr.mastery_score, 0) / stats.length) 
+  const avgRetention = safeStats.length > 0 
+    ? Math.round(safeStats.reduce((acc, curr) => acc + curr.mastery_score, 0) / safeStats.length) 
     : 0;
 
   const handlePriorityClick = () => {
-    // Interaction ownership: clicking the hero card navigates into the chosen module detail page.
     if (priorityModule) {
       router.push(`/modules/${priorityModule.module_id}`);
     }
@@ -72,7 +81,6 @@ export default function Dashboard() {
   }
 
   return (
-    // Page container controls vertical rhythm for header, KPI row, and two-column content region.
     <div className="w-full flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
       {/* Header Section */}
@@ -113,7 +121,7 @@ export default function Dashboard() {
             <span className="text-sm font-bold uppercase tracking-wider">Modules Active</span>
           </div>
           <div className="flex items-end gap-2">
-            <span className="text-4xl font-black text-white">{stats.length}</span>
+            <span className="text-4xl font-black text-white">{safeStats.length}</span>
             <span className="text-sm font-bold text-slate-500 mb-2 uppercase tracking-wide">Topics</span>
           </div>
         </div>
@@ -179,14 +187,15 @@ export default function Dashboard() {
         {/* Right sidebar owns module activity list and remains secondary to the priority card. */}
         <div className="flex flex-col gap-6">
           <h2 className="text-xl font-bold text-slate-200">System Activity</h2>
-          <div className="glass-panel p-6 rounded-3xl flex flex-col gap-4 h-full  overflow-hidden relative">
-            {stats.length === 0 ? (
-               <div className="flex-1 flex items-center justify-center text-center text-slate-500 italic text-sm  px-4  animate-pulse">
+          <div className="glass-panel p-6 rounded-3xl flex flex-col gap-4 h-full overflow-hidden relative">
+            {safeStats.length === 0 ? (
+               <div className="flex-1 flex items-center justify-center text-center text-slate-500 italic text-sm px-4 animate-pulse">
                  <p>Awaiting data injection. Visit the Discover page to add payloads to your engine.</p>
                </div>
             ) : (
               <div className="flex flex-col gap-4 overflow-y-auto max-h-[300px] scrollbar-hide pr-2">
-                {stats.map((stat, idx) => (
+                {/* SAFE RENDER LOOP */}
+                {safeStats.map((stat, idx) => (
                   <Link href={`/modules/${stat.module_id}`} key={idx} className="flex flex-col gap-2 p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/10 group cursor-pointer">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-bold text-white group-hover:text-sky-400 transition-colors truncate pr-4">

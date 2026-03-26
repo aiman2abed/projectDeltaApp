@@ -30,10 +30,19 @@ export default function ModulesPage() {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/modules`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
+        
         const data = await response.json();
-        setModules(data);
+        
+        // STRICT ARRAY CHECK: Prevents the .filter() and .map() TypeErrors
+        if (Array.isArray(data)) {
+          setModules(data);
+        } else {
+          console.warn("API did not return an array for modules:", data);
+          setModules([]); // Fallback to empty array
+        }
       } catch (err) {
         console.error("Failed to fetch modules:", err);
+        setModules([]); // Fallback to empty array on network failure
       } finally {
         setLoading(false);
       }
@@ -41,9 +50,12 @@ export default function ModulesPage() {
     fetchModules();
   }, [supabase]);
 
-  const filteredModules = modules.filter(mod => 
-    mod.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    mod.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  // SAFE ARRAY REFERENCE: Guarantees .filter is always called on an array
+  const safeModules = Array.isArray(modules) ? modules : [];
+
+  const filteredModules = safeModules.filter(mod => 
+    (mod.title?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || 
+    (mod.description?.toLowerCase() || "").includes(searchQuery.toLowerCase())
   );
 
   if (loading) return <div className="p-10 text-sky-400 font-mono animate-pulse">SYNCING ARCHIVES...</div>;
@@ -64,20 +76,32 @@ export default function ModulesPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredModules.map((mod) => (
-          <Link href={`/modules/${mod.id}`} key={mod.id} className="block group">
-            <div className="glass-panel p-6 rounded-2xl h-full flex flex-col hover:-translate-y-1 transition-all border-white/5 hover:border-sky-500/30">
-              <h3 className="text-xl font-bold text-white mb-2 group-hover:text-sky-300">{mod.title}</h3>
-              <p className="text-sm text-slate-400 line-clamp-3">{mod.description}</p>
-              <div className="mt-auto pt-4 flex justify-between items-center text-[10px] font-bold text-sky-400 uppercase tracking-widest">
-                <span>Database Node: {mod.id}</span>
-                <span>Enter Module →</span>
+      {safeModules.length === 0 ? (
+         <div className="w-full p-10 text-center text-slate-500 italic">
+           No learning modules found.
+         </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredModules.map((mod) => (
+            <Link href={`/modules/${mod.id}`} key={mod.id} className="block group">
+              <div className="glass-panel p-6 rounded-2xl h-full flex flex-col hover:-translate-y-1 transition-all border-white/5 hover:border-sky-500/30">
+                <h3 className="text-xl font-bold text-white mb-2 group-hover:text-sky-300">{mod.title}</h3>
+                <p className="text-sm text-slate-400 line-clamp-3">{mod.description}</p>
+                <div className="mt-auto pt-4 flex justify-between items-center text-[10px] font-bold text-sky-400 uppercase tracking-widest">
+                  <span>Enter Module →</span>
+                </div>
               </div>
+            </Link>
+          ))}
+          
+          {/* Edge case: User searched for something that doesn't exist */}
+          {safeModules.length > 0 && filteredModules.length === 0 && (
+            <div className="col-span-full p-10 text-center text-slate-500 italic">
+              No modules match your search query.
             </div>
-          </Link>
-        ))}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

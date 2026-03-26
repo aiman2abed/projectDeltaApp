@@ -72,3 +72,10 @@ body {
 .animate-shake {
   animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
 }
+
+@layer utilities {
+  /* Protects the BottomNav from the iOS home indicator */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+} 

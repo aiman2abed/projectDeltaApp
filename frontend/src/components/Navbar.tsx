@@ -2,68 +2,110 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import Image from "next/image";
+
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = createClient();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [roleLoading, setRoleLoading] = useState(true);
 
-  // Auth pages own their full-screen layout, so the shared navigation shell is suppressed there.
+  const supabase = useMemo(() => createClient(), []);
+
+  useEffect(() => {
+    const checkRole = async () => {
+      setRoleLoading(true);
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setIsAdmin(false);
+        setRoleLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      console.log("role query data:", data);
+      console.log("role query error:", error);
+
+      const admin = data?.role?.toLowerCase() === "admin";
+      setIsAdmin(admin);
+      setRoleLoading(false);
+
+      console.log("isAdmin state should become:", admin);
+    };
+
+    checkRole();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      checkRole();
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
+
   if (pathname === "/login" || pathname === "/signup") {
     return null;
   }
 
   const handleLogout = async () => {
-    // Interaction ownership: this clears auth state, then redirects into the guest route boundary.
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
   };
 
-  // Define your Spirelay routes
-  const navLinks = [
+  const baseLinks = [
     { name: "Dashboard", href: "/" },
     { name: "Discover", href: "/discover" },
     { name: "Modules", href: "/modules" },
     { name: "Review", href: "/review" },
     { name: "Settings", href: "/settings" },
-    { name: "Admin", href: "/admin" },
   ];
 
+  const navLinks = isAdmin
+    ? [...baseLinks, { name: "Admin", href: "/admin" }]
+    : baseLinks;
+
   return (
-    // Sticky header layer that stays above page content with z-50 ownership.
     <header className="sticky top-0 z-50 w-full glass-panel border-b-0 border-white/5">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        {/* Left header region owns brand identity and desktop route navigation. */}
         <div className="flex items-center gap-8">
-          
-          {/* Brand Logo & Name */}
-            <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity group">
-            {/* Enlarged Logo Container */}
+          <Link href="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity group">
             <div className="bg-gradient-to-tr from-cyan-400/70 to-indigo-500/30 rounded-2xl p-1 shadow-[0_0_25px_rgba(56,189,248,0.25)] group-hover:shadow-[0_0_35px_rgba(56,189,248,0.4)] transition-all duration-300">
-            <div className="w-10 h-10 rounded-2xl bg-slate-800/40 border border-white/10 flex items-center justify-center shadow-[0_0_15px_rgba(56,189,248,0.25)] group-hover:shadow-[0_0_35px_rgba(56,189,248,0.4)] transition-all duration-300 overflow-hidden">
+              <div className="w-10 h-10 rounded-2xl bg-slate-800/40 border border-white/10 flex items-center justify-center shadow-[0_0_15px_rgba(56,189,248,0.25)] group-hover:shadow-[0_0_35px_rgba(56,189,248,0.4)] transition-all duration-300 overflow-hidden">
                 <Image
-                src="/spirelay_logo_noBg.png" 
-                alt="Spirelay Logo"
-                width={56} 
-                height={56}
-                className="object-contain p-3 scale-600 w-full h-full" 
-                priority
+                  src="/spirelay_logo_noBg.png"
+                  alt="Spirelay Logo"
+                  width={56}
+                  height={56}
+                  className="object-contain p-3 scale-600 w-full h-full"
+                  priority
                 />
+              </div>
             </div>
-            </div>
-            {/* Architected Brand Name */}
+
             <div className="flex flex-col">
-                <span className="font-black text-2xl tracking-tighter text-white leading-tight">
+              <span className="font-black text-2xl tracking-tighter text-white leading-tight">
                 SPIRELAY
-                </span>
-                <span className="text-[10px] font-bold tracking-[0.4em] text-sky-400 uppercase leading-tight -mt-0.5">
+              </span>
+              <span className="text-[10px] font-bold tracking-[0.4em] text-sky-400 uppercase leading-tight -mt-0.5">
                 Engineered Mastery
-                </span>
+              </span>
             </div>
-            </Link>
-          {/* Desktop Navigation Links */}
+          </Link>
+
           <nav className="hidden md:flex items-center gap-2">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
@@ -83,8 +125,7 @@ export default function Navbar() {
             })}
           </nav>
         </div>
-        
-        {/* Right header region owns session-level actions only. */}
+
         <div className="flex items-center gap-4">
           <button
             onClick={handleLogout}
